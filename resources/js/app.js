@@ -149,3 +149,128 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, 15000);
 });
+
+// -----------------------------------------------------------------------------
+// Mobile app shell enhancements
+// -----------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+    const mobileBack = document.querySelector('[data-mobile-back]');
+    mobileBack?.addEventListener('click', () => {
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+        window.location.href = '/';
+    });
+
+    document.querySelectorAll('[data-auto-toast]').forEach((toast) => {
+        window.setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(0.5rem)';
+            window.setTimeout(() => toast.remove(), 220);
+        }, 3600);
+    });
+
+    const loadingOverlay = document.querySelector('[data-route-loading]');
+    let loadingTimer = null;
+
+    const showLoading = () => {
+        if (!loadingOverlay) return;
+        window.clearTimeout(loadingTimer);
+        loadingTimer = window.setTimeout(() => {
+            loadingOverlay.classList.add('is-visible');
+            loadingOverlay.setAttribute('aria-hidden', 'false');
+        }, 220);
+    };
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.target === '_blank') return;
+        showLoading();
+    });
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href]');
+        if (!link) return;
+        if (link.target === '_blank' || link.hasAttribute('download')) return;
+        if (link.href.startsWith('mailto:') || link.href.startsWith('tel:')) return;
+        const url = new URL(link.href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+        if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+        showLoading();
+    });
+
+    window.addEventListener('pageshow', () => {
+        window.clearTimeout(loadingTimer);
+        loadingOverlay?.classList.remove('is-visible');
+        loadingOverlay?.setAttribute('aria-hidden', 'true');
+    });
+
+    document.querySelectorAll('[data-candidate-carousel]').forEach((carousel) => {
+        const shell = carousel.querySelector('[data-candidate-shell]');
+        const toggle = carousel.querySelector('[data-candidate-toggle]');
+        const track = carousel.querySelector('[data-candidate-track]');
+        const cards = Array.from(carousel.querySelectorAll('[data-candidate-card]'));
+        const dots = Array.from(carousel.querySelectorAll('[data-candidate-dot]'));
+        const eventUrl = carousel.dataset.eventUrl;
+        const viewed = new Set();
+
+        const setActive = (index) => {
+            dots.forEach((dot, dotIndex) => dot.classList.toggle('is-active', dotIndex === index));
+            const card = cards[index];
+            if (!card) return;
+            const taskId = Number(card.dataset.taskId || 0);
+            if (!taskId || viewed.has(taskId) || !eventUrl || !csrfToken) return;
+            viewed.add(taskId);
+            fetch(eventUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    event_type: 'task_viewed',
+                    plan_id: Number(card.dataset.planId || 0) || null,
+                    task_id: taskId,
+                    metadata: { source: 'navigation_candidate_carousel', candidate_index: index },
+                }),
+                keepalive: true,
+            }).catch(() => {});
+        };
+
+        toggle?.addEventListener('click', () => {
+            const opening = !shell?.classList.contains('is-open');
+            shell?.classList.toggle('is-open', opening);
+            toggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+            toggle.textContent = opening ? '候補を閉じる' : '別候補を見る';
+            if (opening) {
+                setActive(0);
+                window.setTimeout(() => shell?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 30);
+            }
+        });
+
+        if (track && cards.length > 0 && 'IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                const visible = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+                if (!visible || visible.intersectionRatio < 0.62) return;
+                const index = cards.indexOf(visible.target);
+                if (index >= 0) setActive(index);
+            }, { root: track, threshold: [0.62, 0.8] });
+            cards.forEach((card) => observer.observe(card));
+        }
+
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                cards[index]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                setActive(index);
+            });
+        });
+    });
+
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+});

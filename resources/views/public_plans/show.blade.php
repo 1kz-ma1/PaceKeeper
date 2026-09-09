@@ -52,7 +52,7 @@
         </p>
     </section>
 
-    <section class="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <section class="mb-8 mobile-metric-strip md:grid md:grid-cols-2 lg:grid-cols-4">
         <div class="info-card p-5">
             <p class="text-sm text-slate-500">期間</p>
             <p class="mt-2 font-bold text-slate-900">

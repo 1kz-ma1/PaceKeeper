@@ -88,20 +88,36 @@ class NavigationController extends Controller
             ? $plans->firstWhere('id', (int) $draft['scope_plan_id'])
             : null;
         $recommendation = null;
+        $recommendations = collect();
 
         if (($draft['step'] ?? null) === 'recommendation') {
             $recommendationPlans = $scopePlan && ($draft['intent'] ?? null) !== 'preferred'
                 ? collect([$scopePlan])
                 : $plans;
-            $recommendation = $recommendationService->recommend(
-                $recommendationPlans,
-                $state,
-                timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
-                excludedTaskIds: $draft['excluded_task_ids'] ?? [],
-                intent: $draft['intent'] ?? null,
-                actorToken: $actorToken,
-                preferredPlanId: $draft['preferred_plan_id'] ?? null,
-            );
+            $candidateExclusions = collect($draft['excluded_task_ids'] ?? [])->map(fn ($id) => (int) $id)->values()->all();
+
+            // Keep the first recommendation decisive, but prepare up to two nearby alternatives
+            // for the mobile swipe deck. Each next candidate excludes the ones before it.
+            for ($index = 0; $index < 3; $index++) {
+                $candidate = $recommendationService->recommend(
+                    $recommendationPlans,
+                    $state,
+                    timeBudgetMinutes: ! empty($draft['minutes']) ? (int) $draft['minutes'] : null,
+                    excludedTaskIds: $candidateExclusions,
+                    intent: $draft['intent'] ?? null,
+                    actorToken: $actorToken,
+                    preferredPlanId: $draft['preferred_plan_id'] ?? null,
+                );
+
+                if (! $candidate) {
+                    break;
+                }
+
+                $recommendations->push($candidate);
+                $candidateExclusions[] = (int) $candidate->task->id;
+            }
+
+            $recommendation = $recommendations->first();
 
             if ($recommendation) {
                 $logger->recordOnce(
@@ -123,6 +139,7 @@ class NavigationController extends Controller
             'intentOptions' => $flowService->intentOptions($state),
             'timeOptions' => $flowService->timeOptions($state),
             'recommendation' => $recommendation,
+            'recommendations' => $recommendations,
             'scopePlan' => $scopePlan,
         ]);
     }

@@ -4,11 +4,11 @@ set -eu
 cd /var/www/html
 
 mkdir -p \
-storage/framework/cache/data \
-storage/framework/sessions \
-storage/framework/views \
-storage/logs \
-bootstrap/cache
+  storage/framework/cache/data \
+  storage/framework/sessions \
+  storage/framework/views \
+  storage/logs \
+  bootstrap/cache
 
 echo "Running Laravel migrations..."
 php artisan migrate --force
