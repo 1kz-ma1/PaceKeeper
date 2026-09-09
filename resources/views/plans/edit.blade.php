@@ -1,0 +1,216 @@
+@extends('layouts.app')
+
+@section('title', '計画編集 | Pace Keeper')
+
+@section('content')
+    <section class="mb-8">
+        <p class="mb-2 text-sm font-semibold text-slate-500">Edit Plan</p>
+
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">
+            計画編集
+        </h1>
+
+        <p class="mt-3 max-w-3xl leading-7 text-slate-600">
+            計画の基本情報や公開設定を変更できます。
+            期限や公開状態を変更すると、進捗計算や公開計画一覧にも反映されます。
+        </p>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            @if ($errors->any())
+                <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <h2 class="mb-2 font-bold">入力内容を確認してください</h2>
+
+                    <ul class="list-inside list-disc">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form action="{{ route('plans.update', $plan) }}" method="POST" class="space-y-6">
+                @csrf
+                @method('PUT')
+
+                <div>
+                    <label for="title" class="mb-2 block text-sm font-medium text-slate-700">
+                        計画タイトル
+                    </label>
+
+                    <input
+                        id="title"
+                        type="text"
+                        name="title"
+                        value="{{ old('title', $plan->title) }}"
+                        required
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                    >
+                </div>
+
+                <div>
+                    <label for="description" class="mb-2 block text-sm font-medium text-slate-700">
+                        説明
+                    </label>
+
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="5"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                    >{{ old('description', $plan->description) }}</textarea>
+                </div>
+
+                <div>
+                    <label for="category" class="mb-2 block text-sm font-medium text-slate-700">
+                        カテゴリ
+                    </label>
+
+                    <select
+                        id="category"
+                        name="category"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                    >
+                        <option value="">選択してください</option>
+                        <option value="資格学習" @selected(old('category', $plan->category) === '資格学習')>資格学習</option>
+                        <option value="個人開発" @selected(old('category', $plan->category) === '個人開発')>個人開発</option>
+                        <option value="制作活動" @selected(old('category', $plan->category) === '制作活動')>制作活動</option>
+                        <option value="ゲーム開発" @selected(old('category', $plan->category) === 'ゲーム開発')>ゲーム開発</option>
+                        <option value="その他" @selected(old('category', $plan->category) === 'その他')>その他</option>
+                    </select>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label for="start_date" class="mb-2 block text-sm font-medium text-slate-700">
+                            開始日
+                        </label>
+
+                        <input
+                            id="start_date"
+                            type="date"
+                            name="start_date"
+                            value="{{ old('start_date', $plan->start_date) }}"
+                            required
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="deadline" class="mb-2 block text-sm font-medium text-slate-700">
+                            期限
+                        </label>
+
+                        <input
+                            id="deadline"
+                            type="date"
+                            name="deadline"
+                            value="{{ old('deadline', $plan->deadline) }}"
+                            required
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                        >
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <label class="flex items-start gap-3">
+                        <input
+                            type="checkbox"
+                            name="is_public"
+                            value="1"
+                            @checked(old('is_public', $plan->is_public))
+                            class="mt-1"
+                        >
+
+                        <span>
+                            <span class="block font-medium text-slate-900">
+                                この計画を公開する
+                            </span>
+
+                            <span class="mt-1 block text-sm leading-6 text-slate-600">
+                                公開すると、他の人が公開計画一覧や共有URLからこの計画を閲覧できます。
+                                公開ページでは編集や作業ログの追加はできません。
+                            </span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button
+                        type="submit"
+                        class="btn-primary"
+                    >
+                        更新する
+                    </button>
+
+                    <a
+                        href="{{ route('plans.show', $plan) }}"
+                        class="btn-secondary"
+                    >
+                        計画詳細へ戻る
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <aside class="space-y-6">
+            <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <h2 class="text-lg font-bold text-slate-900">
+                    現在の状態
+                </h2>
+
+                <dl class="mt-4 space-y-3 text-sm">
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-slate-500">公開設定</dt>
+                        <dd class="font-medium text-slate-900">
+                            {{ $plan->is_public ? '公開' : '非公開' }}
+                        </dd>
+                    </div>
+
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-slate-500">作成日</dt>
+                        <dd class="font-medium text-slate-900">
+                            {{ $plan->created_at->format('Y-m-d') }}
+                        </dd>
+                    </div>
+
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-slate-500">最終更新</dt>
+                        <dd class="font-medium text-slate-900">
+                            {{ $plan->updated_at->format('Y-m-d H:i') }}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div class="rounded-2xl border border-red-200 bg-red-50 p-6">
+                <h2 class="text-lg font-bold text-red-900">
+                    危険な操作
+                </h2>
+
+                <p class="mt-3 text-sm leading-6 text-red-700">
+                    計画を削除すると、紐づくタスクと作業ログも削除されます。
+                    この操作は元に戻せません。
+                </p>
+
+                <form
+                    action="{{ route('plans.destroy', $plan) }}"
+                    method="POST"
+                    class="mt-4"
+                    onsubmit="return confirm('この計画を削除しますか？紐づくタスクと作業ログも削除されます。この操作は元に戻せません。');"
+                >
+                    @csrf
+                    @method('DELETE')
+
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                    >
+                        この計画を削除する
+                    </button>
+                </form>
+            </div>
+        </aside>
+    </section>
+@endsection
