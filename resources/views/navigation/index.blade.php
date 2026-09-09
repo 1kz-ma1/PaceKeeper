@@ -1,30 +1,30 @@
 @extends('layouts.app')
 
-@section('title', '今日やること | Pace Keeper')
+@section('title', '今日 | Pace Keeper')
 
 @section('content')
-    <div class="mx-auto max-w-3xl space-y-6">
-        <header class="flex items-start justify-between gap-4">
-            <div>
+    <div class="mx-auto max-w-3xl space-y-5 md:space-y-6">
+        <header class="flex items-start justify-between gap-3 md:gap-4">
+            <div class="min-w-0">
                 <p class="text-sm font-semibold text-sky-400">Today</p>
-                <h1 class="mt-2 text-3xl font-bold text-slate-100">今日やること</h1>
-                <p class="mt-2 text-sm text-slate-400">
-                    Pace Keeperが今の進捗・Task特性・これまでの選択傾向から、まず1つに絞りました。
+                <h1 class="mt-1 text-3xl font-bold text-slate-100 md:mt-2">今日のおすすめ</h1>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400 md:leading-7">
+                    まず1件だけ。合わなければ、横にスワイプして別候補を選べます。
                 </p>
             </div>
             @if (($draft['step'] ?? 'recommendation') !== 'recommendation')
-                <form method="POST" action="{{ route('navigation.reset') }}">
+                <form method="POST" action="{{ route('navigation.reset') }}" class="shrink-0">
                     @csrf
-                    <button class="btn-secondary">おすすめに戻る</button>
+                    <button class="btn-secondary whitespace-nowrap px-3 text-sm">戻す</button>
                 </form>
             @endif
         </header>
 
         @if ($scopePlan)
             <div class="rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-slate-200">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p><span class="font-semibold text-sky-300">{{ $scopePlan->title }}</span> の中からおすすめしています。</p>
-                    <a href="{{ route('navigation.index', ['all' => 1]) }}" class="text-sm font-semibold text-sky-300 hover:text-sky-200">全Planから選ぶ</a>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <p><span class="font-semibold text-sky-300">{{ $scopePlan->title }}</span> から選んでいます。</p>
+                    <a href="{{ route('navigation.index', ['all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">全Planに広げる</a>
                 </div>
             </div>
         @endif
@@ -36,7 +36,7 @@
                     <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
                         <p class="text-sm font-semibold text-sky-300">条件を変える</p>
                         <h2 class="mt-2 text-xl font-bold text-slate-100">今日はどう進めたい？</h2>
-                        <p class="mt-2 text-sm text-slate-400">必要なときだけ条件を指定してください。通常はおすすめをそのまま開始できます。</p>
+                        <p class="mt-2 text-sm text-slate-400">必要なときだけ条件を指定してください。</p>
                         <div class="chat-action-grid mt-5">
                             @foreach ($intentOptions as $value => $label)
                                 <form method="POST" action="{{ route('navigation.intent') }}">
@@ -74,7 +74,7 @@
                                     </select>
                                 </label>
                             @endif
-                            <button class="btn-primary">この条件でおすすめを見る</button>
+                            <button class="btn-primary w-full sm:w-auto">この条件で見る</button>
                         </form>
                     </div>
                 </div>
@@ -83,66 +83,120 @@
                     <div class="assistant-avatar">PK</div>
                     <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
                         @if ($recommendation)
-                            <div class="flex flex-wrap items-start justify-between gap-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-sky-300">今日のおすすめ</p>
-                                    <h2 class="mt-2 text-2xl font-bold text-slate-100">{{ $recommendation->task->title }}</h2>
-                                    <p class="mt-1 text-slate-400">{{ $recommendation->plan->title }}</p>
+                            <section class="rounded-3xl border border-sky-400/20 bg-slate-950/30 p-4 md:p-5">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold uppercase tracking-[0.18em] text-sky-300">Top pick</p>
+                                        <h2 class="mt-2 text-2xl font-bold text-slate-100">{{ $recommendation->task->title }}</h2>
+                                        <p class="mt-1 truncate text-sm text-slate-400">{{ $recommendation->plan->title }}</p>
+                                    </div>
+                                    <div class="shrink-0 rounded-2xl border border-sky-400/20 bg-slate-950/40 px-3 py-2 text-right">
+                                        <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">目安</p>
+                                        <p class="mt-0.5 text-xl font-black tabular-nums text-slate-100">{{ $recommendation->recommendedMinutes }}分</p>
+                                    </div>
                                 </div>
-                                <div class="rounded-2xl border border-sky-400/20 bg-slate-950/30 px-4 py-3 text-right">
-                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">目安</p>
-                                    <p class="mt-1 text-2xl font-black tabular-nums text-slate-100">{{ $recommendation->recommendedMinutes }}分</p>
+
+                                @if ($recommendation->task->next_action_note)
+                                    <p class="mt-4 rounded-xl border border-sky-400/15 bg-sky-500/10 px-4 py-3 text-sm text-slate-200">
+                                        前回メモ：{{ $recommendation->task->next_action_note }}
+                                    </p>
+                                @endif
+
+                                @if ($recommendation->reasons)
+                                    <ul class="mt-4 space-y-1.5 text-sm text-slate-300">
+                                        @foreach ($recommendation->reasons as $reason)
+                                            <li>・{{ $reason }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+
+                                <div class="mt-5 rounded-2xl border border-emerald-400/15 bg-emerald-500/5 px-4 py-4 text-center">
+                                    <p class="text-4xl font-black tabular-nums text-slate-100 md:text-5xl">00:00</p>
+                                    <p class="mt-2 text-xs leading-5 text-slate-400">押した瞬間から計測。まず{{ $recommendation->recommendedMinutes }}分を目安に。</p>
                                 </div>
-                            </div>
 
-                            @if ($recommendation->task->next_action_note)
-                                <p class="mt-4 rounded-xl border border-sky-400/15 bg-sky-500/10 px-4 py-3 text-sm text-slate-200">
-                                    前回メモ：{{ $recommendation->task->next_action_note }}
-                                </p>
-                            @endif
-
-                            @if ($recommendation->reasons)
-                                <ul class="mt-4 space-y-2 text-sm text-slate-300">
-                                    @foreach ($recommendation->reasons as $reason)
-                                        <li>・{{ $reason }}</li>
-                                    @endforeach
-                                </ul>
-                            @endif
-
-                            <section class="mt-6 rounded-3xl border border-emerald-400/15 bg-emerald-500/5 px-5 py-6 text-center">
-                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">Ready</p>
-                                <p class="mt-3 text-5xl font-black tabular-nums text-slate-100">00:00</p>
-                                <p class="mt-2 text-sm text-slate-400">開始した瞬間から自動で計測します。まず{{ $recommendation->recommendedMinutes }}分を目安に進めます。</p>
-                                <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="mt-5">
+                                <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="mobile-sticky-primary mt-4">
                                     @csrf
                                     <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
                                     <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
                                     <input type="hidden" name="source" value="navigation">
-                                    <button class="btn-primary w-full justify-center text-base sm:w-auto sm:min-w-56">このまま開始</button>
+                                    <button class="btn-primary w-full justify-center py-3 text-base">このまま開始</button>
                                 </form>
                             </section>
 
-                            <div class="mt-5 flex flex-wrap items-center gap-3">
-                                <form method="POST" action="{{ route('navigation.alternative') }}">
-                                    @csrf
-                                    <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
-                                    <button class="btn-secondary">別のTaskにする</button>
-                                </form>
-                                <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="text-sm font-semibold text-sky-300 hover:text-sky-200">条件を変えて選ぶ</a>
+                            <div class="mt-4" data-candidate-carousel data-event-url="{{ route('behavior_events.store') }}">
+                                @if (($recommendations ?? collect())->count() > 1)
+                                    <button type="button" class="btn-secondary w-full justify-center sm:w-auto" data-candidate-toggle aria-expanded="false">
+                                        別候補を見る
+                                    </button>
+
+                                    <section class="candidate-carousel-shell" data-candidate-shell aria-label="別のTask候補">
+                                        <div class="mb-2 flex items-center justify-between gap-3">
+                                            <div>
+                                                <p class="text-sm font-bold text-slate-100">横にスワイプして選ぶ</p>
+                                                <p class="mt-0.5 text-xs text-slate-500">候補は迷いすぎないよう最大3件です。</p>
+                                            </div>
+                                            <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="whitespace-nowrap text-xs font-semibold text-sky-300">条件変更</a>
+                                        </div>
+
+                                        <div class="candidate-track" data-candidate-track>
+                                            @foreach ($recommendations as $candidate)
+                                                <article class="candidate-card {{ $loop->first ? 'is-primary' : '' }}"
+                                                         data-candidate-card
+                                                         data-task-id="{{ $candidate->task->id }}"
+                                                         data-plan-id="{{ $candidate->plan->id }}">
+                                                    <div class="flex items-start justify-between gap-3">
+                                                        <div class="min-w-0">
+                                                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] {{ $loop->first ? 'text-sky-300' : 'text-slate-500' }}">
+                                                                {{ $loop->first ? 'おすすめ' : '候補 ' . ($loop->iteration) }}
+                                                            </p>
+                                                            <h3 class="mt-2 text-lg font-bold text-slate-100">{{ $candidate->task->title }}</h3>
+                                                            <p class="mt-1 truncate text-xs text-slate-400">{{ $candidate->plan->title }}</p>
+                                                        </div>
+                                                        <span class="badge badge-slate shrink-0">{{ $candidate->recommendedMinutes }}分</span>
+                                                    </div>
+
+                                                    @if ($candidate->reasons)
+                                                        <ul class="mt-4 space-y-1 text-xs leading-5 text-slate-400">
+                                                            @foreach ($candidate->reasons as $reason)
+                                                                <li>・{{ $reason }}</li>
+                                                            @endforeach
+                                                        </ul>
+                                                    @endif
+
+                                                    <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form class="mt-5">
+                                                        @csrf
+                                                        <input type="hidden" name="task_id" value="{{ $candidate->task->id }}">
+                                                        <input type="hidden" name="intended_minutes" value="{{ $candidate->recommendedMinutes }}">
+                                                        <input type="hidden" name="source" value="navigation">
+                                                        <button class="{{ $loop->first ? 'btn-primary' : 'btn-secondary' }} w-full justify-center">これを始める</button>
+                                                    </form>
+                                                </article>
+                                            @endforeach
+                                        </div>
+                                        <div class="candidate-pagination" aria-hidden="true">
+                                            @foreach ($recommendations as $candidate)
+                                                <button type="button" class="candidate-dot {{ $loop->first ? 'is-active' : '' }}" data-candidate-dot></button>
+                                            @endforeach
+                                        </div>
+                                    </section>
+                                @else
+                                    <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="text-sm font-semibold text-sky-300 hover:text-sky-200">条件を変えて選ぶ</a>
+                                @endif
                             </div>
 
-                            <p class="mt-4 text-xs leading-6 text-slate-500">
-                                別のTaskを選んだことや、このまま開始したことも次回のおすすめ改善に使われます。
+                            <p class="mt-4 text-xs leading-5 text-slate-500">
+                                どの候補を見て、どれを開始したかも次回のおすすめ改善に使われます。
                             </p>
                         @else
                             <h2 class="text-xl font-bold text-slate-100">今すぐ始められるTaskが見つかりませんでした</h2>
-                            <p class="mt-2 text-slate-400">別候補を見切った場合はおすすめを戻すか、条件を変えて探せます。</p>
-                            <div class="mt-5 flex flex-wrap gap-3">
+                            <p class="mt-2 text-slate-400">条件を変えるか、Taskを追加してからもう一度試してください。</p>
+                            <div class="mt-5 grid gap-3 sm:flex sm:flex-wrap">
                                 <form method="POST" action="{{ route('navigation.reset') }}">
                                     @csrf
-                                    <button class="btn-primary">最初のおすすめに戻る</button>
+                                    <button class="btn-primary w-full sm:w-auto">おすすめを戻す</button>
                                 </form>
-                                <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="btn-secondary">条件を変える</a>
+                                <a href="{{ route('navigation.index', ['configure' => 1]) }}" class="btn-secondary w-full sm:w-auto">条件を変える</a>
                             </div>
                         @endif
                     </div>

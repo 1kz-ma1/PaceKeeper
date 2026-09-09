@@ -83,7 +83,7 @@
         </section>
     @endif
 
-    <section class="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <section class="mb-8 mobile-metric-strip md:grid md:grid-cols-2 lg:grid-cols-4">
         <div class="info-card p-5">
             <p class="text-sm text-slate-500">期間</p>
             <p class="mt-2 font-bold text-slate-900">{{ $plan->start_date->format('Y-m-d') }} 〜 {{ $plan->deadline->format('Y-m-d') }}</p>
@@ -117,7 +117,7 @@
                     <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">AIと作業可能時間を更新</a>
                 @endif
             </div>
-            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="mt-5 mobile-metric-strip sm:grid sm:grid-cols-2 lg:grid-cols-4">
                 @foreach ($plan->availabilityRules->sortBy('day_of_week') as $rule)
                     @php $dayLabels = [0 => '日', 1 => '月', 2 => '火', 3 => '水', 4 => '木', 5 => '金', 6 => '土']; @endphp
                     <div class="metric-card"><p class="text-xs text-slate-500">{{ $dayLabels[$rule->day_of_week] ?? $rule->day_of_week }}曜日</p><p class="mt-1 font-bold text-slate-900">{{ $rule->available_minutes }}分{{ $rule->is_optional ? '（任意）' : '' }}</p></div>
@@ -269,7 +269,7 @@
                             @endif
                         </div>
 
-                        <div class="mt-4 grid gap-3 md:grid-cols-6">
+                        <div class="mt-4 mobile-metric-strip md:grid md:grid-cols-6">
                             <div class="metric-card"><p class="text-xs text-slate-500">総想定時間</p><p class="font-semibold text-slate-900">{{ $task->estimated_minutes }}分</p></div>
                             <div class="metric-card"><p class="text-xs text-slate-500">残り時間</p><p class="font-semibold text-slate-900">{{ $task->remaining_minutes ?? 0 }}分</p></div>
                             <div class="metric-card"><p class="text-xs text-slate-500">進捗率</p><p class="font-semibold text-slate-900">{{ $task->progress_percent }}%</p></div>

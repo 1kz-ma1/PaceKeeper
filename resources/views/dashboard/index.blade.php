@@ -17,15 +17,15 @@
         <header class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
                 <p class="text-sm font-semibold text-sky-400">Today</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-100 font-heading">次の行動を決める</h1>
+                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-100 font-heading"><span class="md:hidden">次の行動</span><span class="hidden md:inline">次の行動を決める</span></h1>
                 <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-300">{{ $guidedMode ? 'まずは候補を1件に絞って、始めることを優先します。' : '今の状況から、始めやすく価値の高い次の1件を先に表示します。' }}</p>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:flex-wrap">
                 <form method="POST" action="{{ route('chat.start', 'review') }}">
                     @csrf
-                    <button type="submit" class="btn-secondary">計画を更新</button>
+                    <button type="submit" class="btn-secondary w-full whitespace-nowrap md:w-auto">計画を更新</button>
                 </form>
-                <a href="{{ route('navigation.index') }}" data-navigation-link class="btn-primary">今日のおすすめ</a>
+                <a href="{{ route('navigation.index') }}" data-navigation-link class="btn-primary w-full whitespace-nowrap md:w-auto">今日のおすすめ</a>
             </div>
         </header>
 
@@ -109,18 +109,18 @@
                                 </ul>
                             @endif
                         </div>
-                        <div class="flex shrink-0 flex-wrap gap-2">
+                        <div class="grid w-full shrink-0 grid-cols-2 gap-2 lg:w-auto lg:flex lg:flex-wrap">
                             <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
                                 @csrf
                                 <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
                                 <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
                                 <input type="hidden" name="source" value="dashboard">
-                                <button class="btn-primary">この作業を始める</button>
+                                <button class="btn-primary w-full whitespace-nowrap">この作業を始める</button>
                             </form>
                             <form method="POST" action="{{ route('recommendations.alternative') }}">
                                 @csrf
                                 <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
-                                <button class="btn-secondary">別の候補</button>
+                                <button class="btn-secondary w-full whitespace-nowrap">別の候補</button>
                             </form>
                         </div>
                     </div>
@@ -147,7 +147,7 @@
                     今日 {{ $dashboard['today_minutes'] }}分実績・目安まであと {{ $todayRemaining }}分
                 </div>
             @else
-                <div class="grid gap-4 md:grid-cols-3">
+                <div class="hidden gap-4 md:grid md:grid-cols-3">
                     <div class="info-card p-5">
                         <p class="text-sm text-slate-500">今日あと必要</p>
                         <p class="mt-2 text-3xl font-bold text-slate-900">{{ $todayRemaining }}分</p>
@@ -169,6 +169,17 @@
                         @endif
                     </div>
                 </div>
+                <details class="mobile-detail-card md:hidden">
+                    <summary>
+                        <span>今日あと <strong class="text-sky-200">{{ $todayRemaining }}分</strong></span>
+                        <span class="text-xs font-medium text-slate-500">状況</span>
+                    </summary>
+                    <div class="mobile-detail-content grid grid-cols-2 gap-2 text-sm">
+                        <div class="metric-card"><p class="text-xs text-slate-500">今日の実績</p><p class="mt-1 font-bold">{{ $dashboard['today_minutes'] }}分 / {{ $dashboard['total_daily_required_minutes'] }}分</p></div>
+                        <div class="metric-card"><p class="text-xs text-slate-500">要確認Plan</p><p class="mt-1 font-bold">{{ $dashboard['attention_plans']->count() }}件</p></div>
+                        <div class="metric-card col-span-2"><p class="text-xs text-slate-500">作業リズム</p><p class="mt-1 font-bold">{{ $dashboard['analysis_ready'] ? $state->state->label() : '学習中' }}</p></div>
+                    </div>
+                </details>
             @endif
 
             @if (! empty($dashboard['process_highlights']))
@@ -240,12 +251,24 @@
                 $previousSession = $item['previous_session'];
             @endphp
             <section data-dashboard-panel="plan-{{ $item['plan']->id }}" class="hidden space-y-6">
-                <div class="grid gap-4 md:grid-cols-4">
+                <div class="hidden gap-4 md:grid md:grid-cols-4">
                     <div class="info-card p-5"><p class="text-sm text-slate-500">状態</p><p class="mt-2 text-xl font-bold text-slate-900">{{ $item['progress']['status'] }}</p></div>
                     <div class="info-card p-5"><p class="text-sm text-slate-500">進捗</p><p class="mt-2 text-xl font-bold text-slate-900">{{ $item['progress']['weighted_progress_percent'] }}% <span class="text-sm font-normal text-slate-500">/ 期待 {{ $item['progress']['expected_progress_percent'] }}%</span></p></div>
                     <div class="info-card p-5"><p class="text-sm text-slate-500">今日必要</p><p class="mt-2 text-xl font-bold text-slate-900">{{ $item['progress']['daily_required_minutes'] }}分</p><p class="text-xs text-slate-500">実績 {{ $item['today_minutes'] }}分</p></div>
                     <div class="info-card p-5"><p class="text-sm text-slate-500">期限・残り</p><p class="mt-2 font-bold text-slate-900">{{ $item['plan']->deadline->format('Y-m-d') }}</p><p class="text-xs text-slate-500">残り {{ round($item['progress']['remaining_minutes'] / 60, 1) }}時間</p></div>
                 </div>
+                <details class="mobile-detail-card md:hidden">
+                    <summary>
+                        <span>進捗 <strong class="text-sky-200">{{ $item['progress']['weighted_progress_percent'] }}%</strong></span>
+                        <span class="text-xs font-medium text-slate-500">詳細</span>
+                    </summary>
+                    <div class="mobile-detail-content grid grid-cols-2 gap-2 text-sm">
+                        <div class="metric-card"><p class="text-xs text-slate-500">状態</p><p class="mt-1 font-bold">{{ $item['progress']['status'] }}</p></div>
+                        <div class="metric-card"><p class="text-xs text-slate-500">期待進捗</p><p class="mt-1 font-bold">{{ $item['progress']['expected_progress_percent'] }}%</p></div>
+                        <div class="metric-card"><p class="text-xs text-slate-500">今日必要</p><p class="mt-1 font-bold">{{ $item['progress']['daily_required_minutes'] }}分</p></div>
+                        <div class="metric-card"><p class="text-xs text-slate-500">残り</p><p class="mt-1 font-bold">{{ round($item['progress']['remaining_minutes'] / 60, 1) }}時間</p></div>
+                    </div>
+                </details>
 
                 @if ($planRecommendation)
                     <section class="page-card p-6 ring-1 ring-sky-200">

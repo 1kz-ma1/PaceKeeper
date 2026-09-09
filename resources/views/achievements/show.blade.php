@@ -23,7 +23,7 @@
                         {{ $praise }}
                     </p>
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="mt-5 mobile-metric-strip sm:grid sm:grid-cols-2 lg:grid-cols-4">
                         <div class="rounded-xl bg-slate-50 p-4">
                             <p class="text-xs text-slate-500">取り組み期間</p>
                             <p class="mt-1 font-bold text-slate-900">{{ $durationDays ? $durationDays . '日' : '—' }}</p>

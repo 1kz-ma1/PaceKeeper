@@ -106,7 +106,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-5 grid gap-4 md:grid-cols-4">
+                    <div class="mt-5 mobile-metric-strip md:grid md:grid-cols-4">
                         <div class="metric-card">
                             <p class="text-sm text-slate-500">進捗率</p>
                             <p class="mt-1 text-2xl font-bold text-slate-900">
