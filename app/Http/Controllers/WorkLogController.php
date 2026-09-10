@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\WorkLog;
+use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 
 class WorkLogController extends Controller
@@ -71,13 +72,8 @@ class WorkLogController extends Controller
 
     private function authorizeOwner(WorkLog $workLog): void
     {
-        $plan = $workLog->plan;
-
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この作業ログを削除する権限がありません。');
-        }
+        $workLog->loadMissing('plan');
+        app(PlanOwnershipService::class)->authorizePlan(request(), $workLog->plan);
     }
 
     private function resolveTaskStatus(int $progressPercent): string
@@ -95,10 +91,6 @@ class WorkLogController extends Controller
 
     private function authorizePlanOwner(Plan $plan): void
     {
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この計画を編集する権限がありません。');
-        }
+        app(PlanOwnershipService::class)->authorizePlan(request(), $plan);
     }
 }

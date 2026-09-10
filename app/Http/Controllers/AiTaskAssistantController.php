@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\PlanAdjustment;
 use App\Models\Task;
 use App\Services\PlanProgressService;
+use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -198,10 +199,6 @@ PROMPT;
 
     private function authorizePlanOwner(Plan $plan): void
     {
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この計画を編集する権限がありません。');
-        }
+        app(PlanOwnershipService::class)->authorizePlan(request(), $plan);
     }
 }

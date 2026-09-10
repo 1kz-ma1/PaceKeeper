@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\Task;
+use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -113,21 +114,11 @@ class TaskController extends Controller
 
     private function authorizeOwner(Task $task): void
     {
-        $plan = $task->plan;
-
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'このタスクを編集する権限がありません。');
-        }
+        app(PlanOwnershipService::class)->authorizeTask(request(), $task);
     }
 
     private function authorizePlanOwner(Plan $plan): void
     {
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この計画を編集する権限がありません。');
-        }
+        app(PlanOwnershipService::class)->authorizePlan(request(), $plan);
     }
 }

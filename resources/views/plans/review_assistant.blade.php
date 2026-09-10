@@ -258,67 +258,57 @@
                             </div>
                         @endif
 
+                        <div class="mt-5 rounded-2xl border border-emerald-300/20 bg-slate-950/80 p-4 sm:p-5">
+                            <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">Roadmap Preview</p>
+                                    <h3 class="mt-1 text-lg font-bold text-slate-50">反映後の道筋</h3>
+                                    <p class="mt-1 text-sm leading-6 text-slate-400">一覧ではなく、Taskの追加・具体化・中止・順序変更をRoadmap上で確認します。</p>
+                                </div>
+                            </div>
+                            @include('plans.partials.roadmap', [
+                                'roadmap' => $proposal['roadmap_preview'] ?? ['nodes' => []],
+                                'roadmapPlan' => $plan,
+                                'roadmapCanEdit' => false,
+                                'roadmapMode' => 'preview',
+                            ])
+                        </div>
+
                         <form method="POST" action="{{ route('plans.review_assistant.apply', $plan) }}" class="mt-5 space-y-4">
                             @csrf
                             <input type="hidden" name="proposal_token" value="{{ $proposal['token'] }}">
 
-                            @foreach ($proposal['operations'] as $index => $operation)
-                                @php
-                                    $isDanger = $operation['type'] === 'cancel_task';
-                                @endphp
-
-                                <label class="assistant-operation-card {{ $isDanger ? 'assistant-operation-danger' : '' }}">
-                                    @if ($proposalAtomic)
-                                        <input type="hidden" name="selected_operations[]" value="{{ $index }}">
-                                        <input type="checkbox" checked disabled class="mt-1">
-                                    @else
-                                        <input
-                                            type="checkbox"
-                                            name="selected_operations[]"
-                                            value="{{ $index }}"
-                                            checked
-                                            class="mt-1"
-                                        >
-                                    @endif
-
-                                    <span class="min-w-0 flex-1">
-                                        <span class="flex flex-wrap items-center gap-2">
-                                            <span class="badge {{ $isDanger ? 'badge-red' : 'badge-slate' }}">
-                                                {{ $operationLabels[$operation['type']] ?? $operation['type'] }}
-                                            </span>
-                                            <span class="font-bold text-slate-900">{{ $operation['display'] }}</span>
-                                        </span>
-
-                                        @if (! empty($operation['reason']))
-                                            <span class="mt-2 block text-sm leading-6 text-slate-600">
-                                                理由：{{ $operation['reason'] }}
-                                            </span>
-                                        @endif
-                                        @if (! empty($operation['progress_origin']))
-                                            @php
-                                                $progressOriginLabels = [
-                                                    'existing_work' => '登録前の既存成果',
-                                                    'inherited_task' => '既存タスクからの引継ぎ',
-                                                    'new_work' => '新しい作業実績',
-                                                ];
-                                            @endphp
-                                            <span class="mt-1 block text-sm leading-6 text-slate-600">
-                                                進捗の由来：{{ $progressOriginLabels[$operation['progress_origin']] ?? $operation['progress_origin'] }}
-                                            </span>
-                                        @endif
-                                        @if (! empty($operation['progress_reason']))
-                                            <span class="mt-1 block text-sm leading-6 text-slate-600">
-                                                進捗根拠：{{ $operation['progress_reason'] }}
-                                            </span>
-                                        @endif
-                                    </span>
-                                </label>
-                            @endforeach
+                            @if ($proposalAtomic)
+                                @foreach ($proposal['operations'] as $index => $operation)
+                                    <input type="hidden" name="selected_operations[]" value="{{ $index }}">
+                                @endforeach
+                            @else
+                                <details class="rounded-2xl border border-slate-300 bg-white/70 p-4">
+                                    <summary class="cursor-pointer font-bold text-slate-900">変更の詳細・反映項目を選ぶ</summary>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">Roadmapに直接出ない作業ログや作業可能時間もここで確認できます。</p>
+                                    <div class="mt-4 space-y-3">
+                                        @foreach ($proposal['operations'] as $index => $operation)
+                                            @php $isDanger = $operation['type'] === 'cancel_task'; @endphp
+                                            <label class="assistant-operation-card {{ $isDanger ? 'assistant-operation-danger' : '' }}">
+                                                <input type="checkbox" name="selected_operations[]" value="{{ $index }}" checked class="mt-1">
+                                                <span class="min-w-0 flex-1">
+                                                    <span class="flex flex-wrap items-center gap-2">
+                                                        <span class="badge {{ $isDanger ? 'badge-red' : 'badge-slate' }}">{{ $operationLabels[$operation['type']] ?? $operation['type'] }}</span>
+                                                        <span class="font-bold text-slate-900">{{ $operation['display'] }}</span>
+                                                    </span>
+                                                    @if (! empty($operation['reason']))<span class="mt-2 block text-sm leading-6 text-slate-600">理由：{{ $operation['reason'] }}</span>@endif
+                                                    @if (! empty($operation['next_action_note']))<span class="mt-1 block text-sm leading-6 text-sky-700">次回ここから：{{ $operation['next_action_note'] }}</span>@endif
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </details>
+                            @endif
 
                             @if ($proposalCanApply)
                                 <div class="flex flex-wrap gap-3 pt-2">
                                     <button type="submit" class="btn-primary">
-                                        {{ $proposalAtomic ? '計画再編を一括反映' : '選択した変更を一括反映' }}
+                                        {{ $proposalAtomic ? 'このRoadmapへ一括更新' : '選択した変更を反映' }}
                                     </button>
                                 </div>
                             @endif

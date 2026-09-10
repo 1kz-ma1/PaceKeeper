@@ -286,63 +286,53 @@
 
                 <p class="mt-4 leading-7 text-slate-600">{{ $dashboardJsonProposal['summary'] }}</p>
 
+                <div class="mt-5 rounded-2xl border border-emerald-400/20 bg-slate-950 p-4 text-slate-100">
+                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">Roadmap Preview</p>
+                    <h4 class="mt-1 text-lg font-bold">反映後の道筋</h4>
+                    <p class="mt-1 text-sm text-slate-400">Taskの変更はRoadmap上で確認し、補助情報だけ詳細欄にまとめます。</p>
+                    <div class="mt-4">
+                        @include('plans.partials.roadmap', [
+                            'roadmap' => $dashboardJsonProposal['roadmap_preview'] ?? ['nodes' => []],
+                            'roadmapPlan' => $dashboardJsonPlan,
+                            'roadmapCanEdit' => false,
+                            'roadmapMode' => 'preview',
+                        ])
+                    </div>
+                </div>
+
                 <form method="POST" action="{{ route('plans.review_assistant.apply', $dashboardJsonPlan) }}" class="mt-5 space-y-4">
                     @csrf
                     <input type="hidden" name="proposal_token" value="{{ $dashboardJsonProposal['token'] }}">
                     <input type="hidden" name="return_to" value="dashboard">
 
-                    @foreach ($dashboardJsonProposal['operations'] as $index => $operation)
-                        @php
-                            $isDashboardDanger = $operation['type'] === 'cancel_task';
-                        @endphp
-
-                        <label class="assistant-operation-card {{ $isDashboardDanger ? 'assistant-operation-danger' : '' }}">
-                            @if ($dashboardAtomic)
-                                <input type="hidden" name="selected_operations[]" value="{{ $index }}">
-                                <input type="checkbox" checked disabled class="mt-1">
-                            @else
-                                <input
-                                    type="checkbox"
-                                    name="selected_operations[]"
-                                    value="{{ $index }}"
-                                    checked
-                                    class="mt-1"
-                                >
-                            @endif
-
-                            <span class="min-w-0 flex-1">
-                                <span class="flex flex-wrap items-center gap-2">
-                                    <span class="badge {{ $isDashboardDanger ? 'badge-red' : 'badge-slate' }}">
-                                        {{ $dashboardOperationLabels[$operation['type']] ?? $operation['type'] }}
-                                    </span>
-                                    <span class="font-bold text-slate-900">{{ $operation['display'] }}</span>
-                                </span>
-
-                                @if (! empty($operation['reason']))
-                                    <span class="mt-2 block text-sm leading-6 text-slate-600">理由：{{ $operation['reason'] }}</span>
-                                @endif
-                                @if (! empty($operation['progress_origin']))
-                                    @php
-                                        $progressOriginLabels = [
-                                            'existing_work' => '登録前の既存成果',
-                                            'inherited_task' => '既存タスクからの引継ぎ',
-                                            'new_work' => '新しい作業実績',
-                                        ];
-                                    @endphp
-                                    <span class="mt-1 block text-sm leading-6 text-slate-600">
-                                        進捗の由来：{{ $progressOriginLabels[$operation['progress_origin']] ?? $operation['progress_origin'] }}
-                                    </span>
-                                @endif
-                                @if (! empty($operation['progress_reason']))
-                                    <span class="mt-1 block text-sm leading-6 text-slate-600">進捗根拠：{{ $operation['progress_reason'] }}</span>
-                                @endif
-                            </span>
-                        </label>
-                    @endforeach
+                    @if ($dashboardAtomic)
+                        @foreach ($dashboardJsonProposal['operations'] as $index => $operation)
+                            <input type="hidden" name="selected_operations[]" value="{{ $index }}">
+                        @endforeach
+                    @else
+                        <details class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <summary class="cursor-pointer font-bold text-slate-900">変更の詳細・反映項目</summary>
+                            <div class="mt-4 space-y-3">
+                                @foreach ($dashboardJsonProposal['operations'] as $index => $operation)
+                                    @php $isDashboardDanger = $operation['type'] === 'cancel_task'; @endphp
+                                    <label class="assistant-operation-card {{ $isDashboardDanger ? 'assistant-operation-danger' : '' }}">
+                                        <input type="checkbox" name="selected_operations[]" value="{{ $index }}" checked class="mt-1">
+                                        <span class="min-w-0 flex-1">
+                                            <span class="flex flex-wrap items-center gap-2">
+                                                <span class="badge {{ $isDashboardDanger ? 'badge-red' : 'badge-slate' }}">{{ $dashboardOperationLabels[$operation['type']] ?? $operation['type'] }}</span>
+                                                <span class="font-bold text-slate-900">{{ $operation['display'] }}</span>
+                                            </span>
+                                            @if (! empty($operation['reason']))<span class="mt-2 block text-sm leading-6 text-slate-600">理由：{{ $operation['reason'] }}</span>@endif
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </details>
+                    @endif
 
                     @if ($dashboardCanApply)
                         <button type="submit" class="btn-primary w-full md:w-auto">
-                            {{ $dashboardAtomic ? '計画再編を一括反映' : '選択した変更を対象計画へ反映' }}
+                            {{ $dashboardAtomic ? 'このRoadmapへ一括更新' : '選択した変更を対象計画へ反映' }}
                         </button>
                     @endif
                 </form>

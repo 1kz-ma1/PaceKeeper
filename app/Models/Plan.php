@@ -6,7 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plan extends Model
 {
+    protected $hidden = ['owner_token'];
+
     protected $fillable = [
+        'user_id',
         'owner_token',
         'public_slug',
         'title',
@@ -26,6 +29,11 @@ class Plan extends Model
             'is_public' => 'boolean',
             'last_ai_context_exported_at' => 'datetime',
         ];
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function tasks()

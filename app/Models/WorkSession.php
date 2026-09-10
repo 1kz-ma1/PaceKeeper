@@ -9,6 +9,7 @@ class WorkSession extends Model
     protected $fillable = [
         'actor_token',
         'browser_session_id',
+        'client_session_id',
         'plan_id',
         'task_id',
         'status',

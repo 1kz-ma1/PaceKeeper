@@ -36,6 +36,30 @@
             <div class="assistant-notice assistant-notice-info">{{ session('status') }}</div>
         @endif
 
+        @if (! empty($dashboard['continuity']))
+            @php $continuity = $dashboard['continuity']; @endphp
+            <section class="continuity-card">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">Resume</p>
+                    <p class="mt-2 text-xs text-slate-400">{{ $continuity['plan_title'] }}</p>
+                    <h2 class="mt-1 text-lg font-bold text-slate-50">{{ $continuity['task_title'] }}</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-300">{{ $continuity['next_action_note'] ?: '前回の作業文脈から、そのまま再開できます。' }}</p>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2 sm:mt-0">
+                    @if ($continuity['is_active'])
+                        <a href="{{ route('work_sessions.active', $continuity['session_id']) }}" class="btn-primary">作業へ戻る</a>
+                    @elseif ($continuity['can_resume_task'])
+                        <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
+                            @csrf
+                            <input type="hidden" name="task_id" value="{{ $continuity['task_id'] }}">
+                            <input type="hidden" name="source" value="dashboard">
+                            <button type="submit" class="btn-primary">続きから開始</button>
+                        </form>
+                    @endif
+                </div>
+            </section>
+        @endif
+
         @if (($dashboard['pending_plan_updates'] ?? collect())->isNotEmpty())
             <section class="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -337,4 +361,29 @@
 
         <div class="text-right"><a href="{{ route('dashboard.tools') }}" class="text-sm text-slate-400 hover:text-slate-200">AI JSON・管理ツールを開く</a></div>
     </div>
+@endsection
+
+@section('offline_snapshot')
+@php
+    $offlineCurrent = $recommendation ? [
+        'task_id' => $recommendation->task->id,
+        'title' => $recommendation->task->title,
+        'status' => $recommendation->task->status,
+        'status_label' => $recommendation->task->status === 'doing' ? '進行中' : '未着手',
+        'progress_percent' => $recommendation->task->progress_percent,
+        'remaining_minutes' => $recommendation->task->remaining_minutes,
+        'next_action_note' => $recommendation->task->next_action_note,
+        'is_current' => true,
+    ] : null;
+    $offlineSnapshot = [
+        'type' => 'dashboard',
+        'captured_at' => now()->toIso8601String(),
+        'csrf_token' => csrf_token(),
+        'plan' => $recommendation ? ['id' => $recommendation->plan->id, 'title' => $recommendation->plan->title] : null,
+        'current' => $offlineCurrent,
+        'roadmap' => $offlineCurrent ? [$offlineCurrent] : [],
+        'continuity' => $dashboard['continuity'] ?? null,
+    ];
+@endphp
+<script type="application/json" id="pacekeeper-offline-snapshot">{!! json_encode($offlineSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 @endsection

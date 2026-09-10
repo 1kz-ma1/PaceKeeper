@@ -23,7 +23,7 @@ class BehaviorIdentityService
         $request->session()->put(self::SESSION_KEY, $token);
 
         if ($request->cookie(self::COOKIE_NAME) !== $token) {
-            cookie()->queue(self::COOKIE_NAME, $token, 60 * 24 * 365 * 2, '/', null, false, true, false, 'lax');
+            cookie()->queue(self::COOKIE_NAME, $token, 60 * 24 * 365 * 2, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
         }
 
         return $token;
