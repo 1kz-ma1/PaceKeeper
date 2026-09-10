@@ -154,6 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // Mobile app shell enhancements
 // -----------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+    // Remove the one-shot Instant Start network-only flag after the real app
+    // has loaded successfully, without triggering another navigation.
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has('_pk_network')) {
+        currentUrl.searchParams.delete('_pk_network');
+        window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+    }
+
     const mobileBack = document.querySelector('[data-mobile-back]');
     mobileBack?.addEventListener('click', () => {
         if (window.history.length > 1) {

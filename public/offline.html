@@ -48,9 +48,34 @@ async function start(){if(!snapshot?.current?.task_id)return;offlineSession={cli
 async function pauseResume(){if(!offlineSession||offlineSession.ended_at)return;if(offlineSession.paused_at){offlineSession.paused_seconds+=(Date.now()-Date.parse(offlineSession.paused_at))/1000;offlineSession.paused_at=null}else offlineSession.paused_at=new Date().toISOString();await put('offline_session',offlineSession);controls()}
 async function finish(){if(!offlineSession)return;if(offlineSession.paused_at){offlineSession.paused_seconds+=(Date.now()-Date.parse(offlineSession.paused_at))/1000;offlineSession.paused_at=null}offlineSession.ended_at=new Date().toISOString();offlineSession.actual_seconds=elapsed(offlineSession);await put('offline_session',offlineSession);controls();await trySync()}
 async function trySync(){if(!offlineSession?.ended_at||!snapshot?.csrf_token)return false;try{const r=await fetch('/offline/work-sessions/sync',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':snapshot.csrf_token},body:JSON.stringify({client_session_id:offlineSession.client_session_id,task_id:offlineSession.task_id,started_at:offlineSession.started_at,ended_at:offlineSession.ended_at,actual_seconds:offlineSession.actual_seconds,intended_minutes:null})});if(!r.ok)return false;await del('offline_session');offlineSession=null;location.reload();return true}catch{return false}}
-async function probe(){try{const r=await fetch('/health',{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw 0;serverReady=true;document.getElementById('netDot').classList.add('ok');document.getElementById('netLabel').textContent='接続できました';if(offlineSession?.ended_at){await trySync();return}if(!offlineSession){setTimeout(()=>location.reload(),450)}}catch{serverReady=false;document.getElementById('netDot').classList.remove('ok');document.getElementById('netLabel').textContent=navigator.onLine?'サーバーを起動中…':'オフライン'}}
+let handoffInProgress=false,probeTimer=null;
+async function probe(){
+  if(handoffInProgress)return;
+  try{
+    const r=await fetch('/health?ts='+Date.now(),{cache:'no-store',credentials:'same-origin'});
+    if(!r.ok)throw 0;
+    serverReady=true;
+    document.getElementById('netDot').classList.add('ok');
+    document.getElementById('netLabel').textContent='接続できました';
+    if(offlineSession?.ended_at){await trySync();return}
+    if(!offlineSession){
+      // Lock the handoff so overlapping 2.5s probes cannot schedule multiple
+      // reloads. Retry this exact URL with a one-shot SW network-only flag.
+      handoffInProgress=true;
+      if(probeTimer)clearInterval(probeTimer);
+      document.getElementById('netLabel').textContent='最新画面を読み込み中…';
+      const target=new URL(window.location.href);
+      target.searchParams.set('_pk_network','1');
+      setTimeout(()=>window.location.replace(target.href),300);
+    }
+  }catch{
+    serverReady=false;
+    document.getElementById('netDot').classList.remove('ok');
+    document.getElementById('netLabel').textContent=navigator.onLine?'サーバーを起動中…':'オフライン';
+  }
+}
 document.getElementById('startBtn').addEventListener('click',start);document.getElementById('pauseBtn').addEventListener('click',pauseResume);document.getElementById('finishBtn').addEventListener('click',finish);
-(async()=>{snapshot=await get('latest_snapshot');offlineSession=await get('offline_session');render();if(offlineSession&&!offlineSession.ended_at)timerId=setInterval(renderTimer,1000);await probe();setInterval(probe,2500)})().catch(()=>probe());
+(async()=>{snapshot=await get('latest_snapshot');offlineSession=await get('offline_session');render();if(offlineSession&&!offlineSession.ended_at)timerId=setInterval(renderTimer,1000);await probe();if(!handoffInProgress)probeTimer=setInterval(probe,2500)})().catch(()=>{if(!handoffInProgress)probeTimer=setInterval(probe,2500);probe()});
 </script>
 </body>
 </html>
