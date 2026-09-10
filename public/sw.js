@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'pacekeeper-shell-v2';
+const CACHE_VERSION = 'pacekeeper-shell-v3';
 const STATIC_ASSETS = [
     '/offline.html',
     '/manifest.webmanifest',
@@ -32,6 +32,19 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
     if (request.mode === 'navigate') {
+        // The offline shell probes /health while Render wakes up. Once the
+        // server is confirmed ready it retries the original navigation with
+        // _pk_network=1. That retry must be network-only; otherwise the normal
+        // 1.2s Instant Start timeout can serve offline.html again and create a
+        // reload/fallback loop even though the server is already awake.
+        if (url.searchParams.get('_pk_network') === '1') {
+            event.respondWith(
+                fetch(request, { cache: 'no-store' })
+                    .catch(() => caches.match('/offline.html'))
+            );
+            return;
+        }
+
         const networkRequest = fetch(request, { cache: 'no-store' });
         event.waitUntil(networkRequest.then(() => undefined).catch(() => undefined));
         event.respondWith(
