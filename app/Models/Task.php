@@ -10,6 +10,8 @@ class Task extends Model
         'plan_id',
         'depends_on_task_id',
         'continuation_of_task_id',
+        'lineage_source_task_ids',
+        'lineage_source_snapshots',
         'title',
         'description',
         'estimated_minutes',
@@ -32,6 +34,8 @@ class Task extends Model
             'priority' => 'integer',
             'activation_cost' => 'integer',
             'sort_order' => 'integer',
+            'lineage_source_task_ids' => 'array',
+            'lineage_source_snapshots' => 'array',
         ];
     }
 

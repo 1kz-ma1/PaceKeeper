@@ -1,0 +1,133 @@
+@php
+    $roadmapMode = $roadmapMode ?? 'plan';
+    $roadmapCanEdit = $roadmapCanEdit ?? false;
+    $roadmapPlan = $roadmapPlan ?? $plan ?? null;
+    $roadmapPreview = $roadmapMode === 'preview';
+    $roadmapRecommendedMinutes = $roadmapRecommendedMinutes ?? null;
+    $roadmapRecommendationReasons = $roadmapRecommendationReasons ?? [];
+    $changeLabels = [
+        'created' => '追加',
+        'updated' => '具体化',
+        'cancelled' => '中止',
+        'kept' => '維持',
+        'reordered' => '順序変更',
+    ];
+@endphp
+
+<div class="living-roadmap" data-living-roadmap>
+    @forelse (($roadmap['nodes'] ?? []) as $index => $node)
+        @php
+            $isCurrent = (bool) ($node['is_current'] ?? false);
+            $isDone = ($node['status'] ?? null) === 'done';
+            $isCancelled = ($node['status'] ?? null) === 'cancelled';
+            $isChanged = ($node['change_type'] ?? 'unchanged') !== 'unchanged';
+        @endphp
+        <div class="roadmap-row {{ $isCurrent ? 'is-current' : '' }} {{ $isDone ? 'is-done' : '' }} {{ $isCancelled ? 'is-cancelled' : '' }} {{ $isChanged ? 'is-changed' : '' }}">
+            <div class="roadmap-rail" aria-hidden="true">
+                <span class="roadmap-dot">
+                    @if ($isDone)
+                        ✓
+                    @elseif ($isCancelled)
+                        ×
+                    @elseif ($isCurrent)
+                        ◎
+                    @else
+                        ○
+                    @endif
+                </span>
+                @if (! $loop->last)<span class="roadmap-line"></span>@endif
+            </div>
+
+            @if ($isCurrent)
+                <article class="roadmap-current-card">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="roadmap-now-badge">今ここ</span>
+                        @if ($node['is_last_worked'] ?? false)<span class="badge badge-slate">前回の文脈</span>@endif
+                        @if ($node['is_lineage_child'] ?? false)<span class="badge badge-green">実績から具体化</span>@endif
+                        @if ($node['is_lineage_source'] ?? false)<span class="badge badge-green">分解後の残り</span>@endif
+                        @if ($roadmapPreview && $isChanged)<span class="roadmap-change-badge">{{ $changeLabels[$node['change_type']] ?? '変更' }}</span>@endif
+                    </div>
+                    <h3 class="mt-3 text-xl font-bold text-slate-50">{{ $node['title'] }}</h3>
+                    @if (! empty($node['description']))
+                        <p class="mt-2 text-sm leading-7 text-slate-300">{{ $node['description'] }}</p>
+                    @endif
+
+                    @if (! empty($node['lineage_children']))
+                        <div class="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-3 text-sm leading-6 text-emerald-100">
+                            実績をもとに分解済み：{{ collect($node['lineage_children'])->pluck('title')->implode(' / ') }}
+                        </div>
+                    @endif
+
+                    @if (! empty($node['next_action_note']))
+                        <div class="roadmap-resume-note mt-4">
+                            <p class="text-xs font-bold uppercase tracking-[0.14em] text-sky-300">次回ここから</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-100">{{ $node['next_action_note'] }}</p>
+                        </div>
+                    @endif
+
+                    <div class="mt-4 flex flex-wrap gap-2 text-xs">
+                        @if (! $roadmapPreview && $roadmapRecommendedMinutes)<span class="badge badge-green">今回 {{ $roadmapRecommendedMinutes }}分</span>@endif
+                        <span class="badge badge-slate">残り {{ $node['remaining_minutes'] }}分</span>
+                        <span class="badge badge-slate">進捗 {{ $node['progress_percent'] }}%</span>
+                        @if (! empty($node['prerequisite_title']))<span class="badge badge-slate">前提 {{ $node['prerequisite_title'] }}</span>@endif
+                    </div>
+
+                    @if (! $roadmapPreview && ! empty($roadmapRecommendationReasons))
+                        <ul class="mt-4 space-y-1 text-xs leading-5 text-slate-400">
+                            @foreach (array_slice($roadmapRecommendationReasons, 0, 2) as $reason)
+                                <li>・{{ $reason }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if ($roadmapCanEdit && ! $roadmapPreview && ($node['startable'] ?? false) && ! empty($node['task_id']))
+                        <form method="POST" action="{{ route('work_sessions.start') }}" class="mt-5" data-work-start-form>
+                            @csrf
+                            <input type="hidden" name="task_id" value="{{ $node['task_id'] }}">
+                            <input type="hidden" name="source" value="plan">
+                            @if ($roadmapRecommendedMinutes)<input type="hidden" name="intended_minutes" value="{{ $roadmapRecommendedMinutes }}">@endif
+                            <button type="submit" class="btn-primary w-full sm:w-auto">{{ ($node['is_last_worked'] ?? false) ? '続きから開始' : 'このTaskを開始' }}</button>
+                        </form>
+                    @endif
+                </article>
+            @else
+                <details class="roadmap-node-card group" {{ $roadmapPreview && $isChanged ? 'open' : '' }}>
+                    <summary class="roadmap-node-summary">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="truncate font-semibold {{ $isCancelled ? 'line-through text-slate-500' : 'text-slate-100' }}">{{ $node['title'] }}</span>
+                                @if ($node['is_lineage_child'] ?? false)<span class="badge badge-green">分解</span>@endif
+                                @if ($node['is_lineage_source'] ?? false)<span class="badge badge-green">分解元</span>@endif
+                                @if ($roadmapPreview && $isChanged)<span class="roadmap-change-badge">{{ $changeLabels[$node['change_type']] ?? '変更' }}</span>@endif
+                            </div>
+                            <p class="mt-1 text-xs text-slate-500">{{ $node['status_label'] }} · {{ $node['progress_percent'] }}% · 残り{{ $node['remaining_minutes'] }}分</p>
+                        </div>
+                        <span class="roadmap-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="roadmap-node-detail">
+                        @if (! empty($node['description']))<p class="text-sm leading-6 text-slate-300">{{ $node['description'] }}</p>@endif
+                        @if (! empty($node['next_action_note']))
+                            <p class="mt-3 rounded-xl bg-sky-500/10 px-3 py-2 text-sm text-sky-100">次回：{{ $node['next_action_note'] }}</p>
+                        @endif
+                        @if (! empty($node['source_task_titles']))
+                            <p class="mt-3 text-xs text-emerald-300">実績に基づくTask系譜：「{{ implode('」「', $node['source_task_titles']) }}」から具体化</p>
+                        @endif
+                        @if (! empty($node['lineage_children']))
+                            <p class="mt-2 text-xs text-emerald-300">このTaskから分解：{{ collect($node['lineage_children'])->pluck('title')->implode(' / ') }}</p>
+                        @endif
+                        @if ($roadmapCanEdit && ! $roadmapPreview && ($node['startable'] ?? false) && ! empty($node['task_id']))
+                            <form method="POST" action="{{ route('work_sessions.start') }}" class="mt-4" data-work-start-form>
+                                @csrf
+                                <input type="hidden" name="task_id" value="{{ $node['task_id'] }}">
+                                <input type="hidden" name="source" value="plan">
+                                <button type="submit" class="btn-secondary w-full sm:w-auto">このTaskを開始</button>
+                            </form>
+                        @endif
+                    </div>
+                </details>
+            @endif
+        </div>
+    @empty
+        <div class="empty-state">Roadmapを作るTaskがまだありません。</div>
+    @endforelse
+</div>

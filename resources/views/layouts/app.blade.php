@@ -49,6 +49,19 @@
                     <a href="{{ route('home') }}" class="nav-link whitespace-nowrap {{ request()->routeIs('home') || request()->routeIs('my_plans.*') || request()->routeIs('plans.show') || request()->routeIs('plans.edit') || request()->routeIs('tasks.*') ? 'nav-link-active' : '' }}">ダッシュボード</a>
                     <a href="{{ route('public_plans.index') }}" class="nav-link whitespace-nowrap {{ request()->routeIs('public_plans.*') ? 'nav-link-active' : '' }}">公開計画</a>
                 </nav>
+
+                <div class="hidden items-center gap-2 lg:flex">
+                    @auth
+                        <span class="max-w-36 truncate text-xs font-semibold text-slate-400">{{ auth()->user()->name }}</span>
+                        <form method="POST" action="{{ route('auth.logout') }}" data-clear-offline-state>
+                            @csrf
+                            <button type="submit" class="btn-secondary px-3 py-2 text-xs">ログアウト</button>
+                        </form>
+                    @else
+                        <a href="{{ route('auth.login.form') }}" class="btn-secondary px-3 py-2 text-xs">ログイン</a>
+                        <a href="{{ route('auth.register.form') }}" class="btn-primary px-3 py-2 text-xs">データを保護</a>
+                    @endauth
+                </div>
             </div>
         </header>
 
@@ -65,6 +78,11 @@
                     <p class="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">PaceKeeper</p>
                     <p class="truncate text-sm font-bold text-slate-50">{{ $mobileSection }}</p>
                 </div>
+                @auth
+                    <a href="{{ route('auth.account') }}" class="account-state-dot is-protected" title="アカウント保護済み" aria-label="アカウント設定"></a>
+                @else
+                    <a href="{{ route('auth.register.form') }}" class="account-state-dot" title="Guest利用中。データを保護できます" aria-label="Guest利用中。データを保護できます"></a>
+                @endauth
             </div>
         </header>
     @endunless
@@ -73,6 +91,19 @@
         @if (session('status'))
             <div class="assistant-notice assistant-notice-info mb-6" data-auto-toast>{{ session('status') }}</div>
         @endif
+
+        @guest
+            @if (request()->routeIs('home') || request()->routeIs('plans.*') || request()->routeIs('navigation.*') || request()->routeIs('work_sessions.*') || request()->routeIs('my_plans.*'))
+                <div class="guest-protection-banner mb-4">
+                    <span><strong>Guest利用中</strong> — このブラウザのCookieが消えると計画を復元できません。</span>
+                    <a href="{{ route('auth.register.form') }}">データを保護</a>
+                </div>
+            @endif
+        @endguest
+
+        <div class="sync-status-chip" data-sync-status aria-live="polite">
+            <span class="sync-status-dot"></span><span data-sync-status-label>オンライン</span>
+        </div>
 
         @yield('content')
     </main>
@@ -89,6 +120,8 @@
             @include('layouts.partials.mobile-nav')
         </div>
     @endunless
+
+    @yield('offline_snapshot')
 
     <div class="route-loading-overlay" data-route-loading aria-hidden="true">
         <div class="route-loading-card">

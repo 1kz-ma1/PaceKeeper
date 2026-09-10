@@ -205,3 +205,41 @@
         </main>
     </div>
 @endsection
+
+@section('offline_snapshot')
+@if ($recommendation)
+@php
+    $offlineCurrent = [
+        'task_id' => $recommendation->task->id,
+        'title' => $recommendation->task->title,
+        'status' => $recommendation->task->status,
+        'status_label' => $recommendation->task->status === 'doing' ? '進行中' : '未着手',
+        'progress_percent' => $recommendation->task->progress_percent,
+        'remaining_minutes' => $recommendation->task->remaining_minutes,
+        'next_action_note' => $recommendation->task->next_action_note,
+        'is_current' => true,
+    ];
+    $offlineSnapshot = [
+        'type' => 'today',
+        'captured_at' => now()->toIso8601String(),
+        'csrf_token' => csrf_token(),
+        'plan' => ['id' => $recommendation->plan->id, 'title' => $recommendation->plan->title],
+        'current' => $offlineCurrent,
+        'roadmap' => collect($recommendations ?? [])
+            ->map(fn ($candidate) => [
+                'task_id' => $candidate->task->id,
+                'title' => $candidate->task->title,
+                'status' => $candidate->task->status,
+                'status_label' => $candidate->task->status === 'doing' ? '進行中' : '候補',
+                'progress_percent' => $candidate->task->progress_percent,
+                'remaining_minutes' => $candidate->task->remaining_minutes,
+                'next_action_note' => $candidate->task->next_action_note,
+                'is_current' => $candidate->task->id === $recommendation->task->id,
+            ])
+            ->values()
+            ->all(),
+    ];
+@endphp
+<script type="application/json" id="pacekeeper-offline-snapshot">{!! json_encode($offlineSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+@endif
+@endsection

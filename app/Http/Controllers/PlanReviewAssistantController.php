@@ -9,6 +9,8 @@ use App\Models\WorkLog;
 use App\Models\WorkSession;
 use App\Services\PlanProgressService;
 use Carbon\Carbon;
+use App\Services\PlanOwnershipService;
+use App\Services\RoadmapService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -433,10 +435,13 @@ class PlanReviewAssistantController extends Controller
                     'remaining_minutes' => $operation['remaining_minutes'],
                     'progress_percent' => $operation['progress_percent'],
                     'progress_reason' => $operation['progress_reason'] ?: null,
+                    'next_action_note' => ($operation['next_action_note'] ?? '') ?: null,
                     'status' => $operation['status'],
                     'priority' => $operation['priority'],
                     'activation_cost' => $operation['activation_cost'] ?? 3,
                     'continuation_of_task_id' => count($operation['source_task_ids'] ?? []) === 1 ? (int) $operation['source_task_ids'][0] : null,
+                    'lineage_source_task_ids' => ! empty($operation['source_task_ids']) ? array_values(array_map('intval', $operation['source_task_ids'])) : null,
+                    'lineage_source_snapshots' => ! empty($operation['source_task_snapshots']) ? $operation['source_task_snapshots'] : null,
                     'sort_order' => $currentMaxSortOrder,
                 ]);
 
@@ -509,6 +514,7 @@ class PlanReviewAssistantController extends Controller
                     'remaining_minutes',
                     'progress_percent',
                     'progress_reason',
+                    'next_action_note',
                     'status',
                     'priority',
                     'activation_cost',
@@ -645,7 +651,7 @@ class PlanReviewAssistantController extends Controller
     {
         $taskLines = $plan->tasks->toBase()->map(function (Task $task) {
             return sprintf(
-                '- ID:%d | %s | 状態:%s | 絶対進捗:%d%% | 総想定:%d分 | 残り:%d分 | 優先度:%d | 進捗根拠:%s | 説明:%s',
+                '- ID:%d | %s | 状態:%s | 絶対進捗:%d%% | 総想定:%d分 | 残り:%d分 | 優先度:%d | 次回再開:%s | 系譜元:%s | 進捗根拠:%s | 説明:%s',
                 $task->id,
                 $task->title,
                 $task->status,
@@ -653,6 +659,8 @@ class PlanReviewAssistantController extends Controller
                 $task->estimated_minutes,
                 $task->remaining_minutes ?? max((int) round($task->estimated_minutes * (100 - $task->progress_percent) / 100), 0),
                 $task->priority,
+                $task->next_action_note ?: '未記録',
+                $task->lineage_source_task_ids ? implode(',', $task->lineage_source_task_ids) : ($task->continuation_of_task_id ?: 'なし'),
                 $task->progress_reason ?: '未記録',
                 $task->description ?: 'なし'
             );
@@ -895,6 +903,8 @@ JSON;
 - 既存タスクを維持・更新する場合、最新の達成条件に対する現在の進捗率を再判定し、変更が必要な値を同じrevise_taskへ含める
 - 旧タスクの成果を新規タスクへ引き継げる場合、add_taskを必ず0%にせず、再利用できる成果をprogress_percentとstatusへ反映する
 - 1つの既存タスクの中で「完了した部分」と「今後やる部分」が明確に分かれた場合は、元タスクを曖昧な途中状態のまま残さない。原則として元タスクをrevise_taskで『今後やる残り』へ具体化し、すでに終わった部分はadd_taskでstatus=doneの独立タスクとして保存してよい。分割タスクにはprogress_origin=inherited_taskとsource_task_idsを使い、履歴関係を残す
+- 作業終了時に次回の再開地点が分かった場合は、対象タスクのnext_action_noteを『次に画面を開いた瞬間に再開できる具体的な一文』へ更新する
+- ロードマップは作業実績から育つ前提とし、粗すぎるタスクは分解、過剰に細かい場合は必要に応じて統合・整理し、次のActionが曖昧にならないようにする
 - タスク分割時は、元タスクと新規タスクのestimated_minutes / remaining_minutesを二重計上しない。分割後の合計残り時間が現実の残作業量と一致するよう再評価する
 - 進捗率は投入時間ではなく、最新の達成条件に対して確認済みの成果が占める割合で判断する
 - 進捗率を根拠付きで判断できないタスクは、更新を省略できるなら質問しない。計画再編上その値の確定が不可欠な場合だけ追加質問する
@@ -946,6 +956,7 @@ JSON;
 - add_task でprogress_percentを0より大きくする場合は、進捗の由来をprogress_originで示す
 - progress_origin は existing_work（Pace Keeper登録前から存在する成果）、inherited_task（登録済み旧タスクから引継ぎ）、new_work（今回の作業実績）のいずれか
 - progress_originがinherited_taskの場合だけsource_task_idsを必須とし、引継ぎ元の登録済みタスクIDを配列で含める
+- add_task / revise_task では、次回再開地点が具体化できる場合 next_action_note を含める
 - 0%より大きい進捗には、どの成果を根拠に判断したかをprogress_reasonへ具体的に含める
 - 登録済みタスクが存在しない既存成果を登録する場合はprogress_originをexisting_workにし、source_task_idsは付けない
 - keep_task は既存タスクを再編後もそのまま維持するときに使い、task_idとreasonを含める
@@ -1358,6 +1369,7 @@ PROMPT;
         $clientRef = trim((string) ($operation['client_ref'] ?? '')) ?: null;
         $progressReason = trim((string) ($operation['progress_reason'] ?? ''));
         $progressOrigin = trim((string) ($operation['progress_origin'] ?? '')) ?: null;
+        $nextActionNote = trim((string) ($operation['next_action_note'] ?? ''));
         $sourceTaskIds = [];
         $normalizationNotes = $operation['_normalization_notes'] ?? [];
 
@@ -1392,6 +1404,16 @@ PROMPT;
                 ]);
             }
         }
+
+        $sourceTaskSnapshots = $sourceTaskIds === []
+            ? []
+            : $plan->tasks()
+                ->whereIn('id', $sourceTaskIds)
+                ->get(['id', 'title'])
+                ->sortBy(fn (Task $task) => array_search((int) $task->id, $sourceTaskIds, true))
+                ->map(fn (Task $task) => ['id' => (int) $task->id, 'title' => $task->title])
+                ->values()
+                ->all();
 
         if ($priority < 1 || $priority > 5) {
             throw ValidationException::withMessages([
@@ -1428,6 +1450,12 @@ PROMPT;
         if (! in_array($status, ['todo', 'doing', 'done'], true)) {
             throw ValidationException::withMessages([
                 'operations_json' => "{$rowNumber}件目の状態が正しくありません。",
+            ]);
+        }
+
+        if (mb_strlen($nextActionNote) > 1000) {
+            throw ValidationException::withMessages([
+                'operations_json' => "{$rowNumber}件目の次回再開地点が長すぎます。",
             ]);
         }
 
@@ -1493,8 +1521,10 @@ PROMPT;
             'progress_percent' => $progressPercent,
             'status' => $status,
             'source_task_ids' => $sourceTaskIds,
+            'source_task_snapshots' => $sourceTaskSnapshots,
             'progress_origin' => $progressOrigin,
             'progress_reason' => $progressReason,
+            'next_action_note' => $nextActionNote,
             'reason' => trim((string) ($operation['reason'] ?? '')),
             '_normalization_notes' => array_values(array_unique(array_filter($normalizationNotes))),
             'display' => "タスクを追加：{$title}（総想定" . (int) $operation['estimated_minutes'] . "分・残り{$remainingMinutes}分・進捗{$progressPercent}%{$originLabel}{$sourceLabel}）",
@@ -1562,6 +1592,16 @@ PROMPT;
             $normalized['progress_reason'] = trim((string) $operation['progress_reason']);
         }
 
+        if (array_key_exists('next_action_note', $operation)) {
+            $nextActionNote = trim((string) $operation['next_action_note']);
+            if (mb_strlen($nextActionNote) > 1000) {
+                throw ValidationException::withMessages([
+                    'operations_json' => "{$rowNumber}件目の次回再開地点が長すぎます。",
+                ]);
+            }
+            $normalized['next_action_note'] = $nextActionNote;
+        }
+
         if (array_key_exists('status', $operation)) {
             if (! in_array($operation['status'], ['todo', 'doing', 'done'], true)) {
                 throw ValidationException::withMessages([
@@ -1595,7 +1635,7 @@ PROMPT;
         }
 
         $changeKeys = array_intersect(array_keys($normalized), [
-            'title', 'description', 'estimated_minutes', 'remaining_minutes', 'progress_percent', 'progress_reason', 'status', 'priority', 'activation_cost',
+            'title', 'description', 'estimated_minutes', 'remaining_minutes', 'progress_percent', 'progress_reason', 'next_action_note', 'status', 'priority', 'activation_cost',
         ]);
 
         if ($changeKeys === []) {
@@ -1612,6 +1652,7 @@ PROMPT;
                 'remaining_minutes' => '残り時間',
                 'progress_percent' => '進捗率',
                 'progress_reason' => '進捗根拠',
+                'next_action_note' => '次回再開地点',
                 'status' => '状態',
                 'priority' => '優先度',
                 'activation_cost' => '開始ハードル',
@@ -1946,6 +1987,8 @@ PROMPT;
     ): array {
         $analysis = $this->analyzeProposal($plan, $action, $operations);
 
+        $roadmapPreview = app(RoadmapService::class)->project($plan, $operations);
+
         return [
             'token' => (string) Str::uuid(),
             'action' => $action,
@@ -1960,6 +2003,7 @@ PROMPT;
                 'category' => $plan->category,
             ],
             'analysis' => $analysis,
+            'roadmap_preview' => $roadmapPreview,
             'can_apply' => $analysis['blocking_issues'] === [],
             'created_at' => now()->toIso8601String(),
         ];
@@ -2530,9 +2574,7 @@ PROMPT;
 
     private function requestOwnsPlan(Request $request, Plan $plan): bool
     {
-        $ownerToken = $request->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        return $ownerToken && hash_equals($plan->owner_token, $ownerToken);
+        return app(PlanOwnershipService::class)->owns($request, $plan);
     }
 
     private function normalizeRequiredText(mixed $value): ?string
@@ -2614,10 +2656,6 @@ PROMPT;
 
     private function authorizePlanOwner(Plan $plan): void
     {
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この計画を編集する権限がありません。');
-        }
+        app(PlanOwnershipService::class)->authorizePlan(request(), $plan);
     }
 }

@@ -83,6 +83,54 @@
         </section>
     @endif
 
+    @if (($canEdit ?? false) && $continuity)
+        <section class="mb-6 continuity-card">
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">昨日の自分から今日へ</p>
+                <h2 class="mt-2 text-lg font-bold text-slate-50">{{ $continuity['task_title'] }}</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-300">
+                    {{ $continuity['next_action_note'] ?: ($continuity['is_active'] ? '進行中のWorkSessionがあります。' : '前回取り組んだTaskです。Roadmapの現在地から続けられます。') }}
+                </p>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 sm:mt-0">
+                @if ($continuity['is_active'])
+                    <a href="{{ route('work_sessions.active', $continuity['session_id']) }}" class="btn-primary">作業へ戻る</a>
+                @elseif ($continuity['can_resume_task'])
+                    <form method="POST" action="{{ route('work_sessions.start') }}" data-work-start-form>
+                        @csrf
+                        <input type="hidden" name="task_id" value="{{ $continuity['task_id'] }}">
+                        <input type="hidden" name="source" value="plan">
+                        <button type="submit" class="btn-primary">続きから開始</button>
+                    </form>
+                @endif
+                @if ($continuity['needs_plan_update'])
+                    <a href="{{ route('plans.review_assistant.show', ['plan' => $plan, 'work_session_id' => $continuity['session_id']]) }}" class="btn-secondary">結果を計画へ反映</a>
+                @endif
+            </div>
+        </section>
+    @endif
+
+    <section class="mb-8 page-card roadmap-shell p-4 sm:p-6">
+        <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-sm font-semibold text-emerald-400">Living Roadmap</p>
+                <h2 class="mt-1 text-2xl font-bold text-slate-50">現在地と、次に進む道</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-400">Taskは固定されたチェックリストではなく、実績に合わせて分解・具体化されるRoadmapとして表示します。今やるべきTaskだけ詳細を開きます。</p>
+            </div>
+            @if ($canEdit ?? false)
+                <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">Roadmapを更新</a>
+            @endif
+        </div>
+        @include('plans.partials.roadmap', [
+            'roadmap' => $roadmap,
+            'roadmapPlan' => $plan,
+            'roadmapCanEdit' => $canEdit ?? false,
+            'roadmapMode' => 'plan',
+            'roadmapRecommendedMinutes' => $recommendation?->recommendedMinutes,
+            'roadmapRecommendationReasons' => $recommendation?->reasons ?? [],
+        ])
+    </section>
+
     <section class="mb-8 mobile-metric-strip md:grid md:grid-cols-2 lg:grid-cols-4">
         <div class="info-card p-5">
             <p class="text-sm text-slate-500">期間</p>
@@ -193,10 +241,10 @@
         </section>
     @endif
 
-    <section class="mb-8 page-card p-6">
+    <section class="mb-8 page-card p-6 hidden md:block">
         <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-slate-900">タスク一覧</h2>
+                <h2 class="text-2xl font-bold text-slate-900">詳細Task一覧</h2>
                 <p class="mt-1 text-sm text-slate-500">追加や進捗・方針の更新は「計画を更新」からまとめて行い、ここでは確認・編集・削除を行います。</p>
             </div>
         </div>
@@ -330,4 +378,25 @@
             </div>
         @endif
     </section>
+@endsection
+
+@section('offline_snapshot')
+@php
+    $offlineCurrent = ! empty($roadmap['current'])
+        ? collect($roadmap['current'])->only(['task_id', 'title', 'status', 'status_label', 'progress_percent', 'remaining_minutes', 'next_action_note', 'is_current'])->all()
+        : null;
+    $offlineSnapshot = [
+        'type' => 'plan',
+        'captured_at' => now()->toIso8601String(),
+        'csrf_token' => csrf_token(),
+        'plan' => ['id' => $plan->id, 'title' => $plan->title, 'category' => $plan->category],
+        'current' => $offlineCurrent,
+        'roadmap' => collect($roadmap['nodes'] ?? [])
+            ->map(fn ($node) => collect($node)->only(['task_id', 'title', 'status', 'status_label', 'progress_percent', 'remaining_minutes', 'next_action_note', 'is_current'])->all())
+            ->values()
+            ->all(),
+        'continuity' => $continuity,
+    ];
+@endphp
+<script type="application/json" id="pacekeeper-offline-snapshot">{!! json_encode($offlineSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 @endsection

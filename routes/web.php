@@ -16,8 +16,20 @@ use App\Http\Controllers\BehaviorEventController;
 use App\Http\Controllers\NavigationController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\WorkSessionController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\OfflineWorkSessionController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('/health', fn () => response()->noContent())->name('health');
+Route::get('/login', [AuthController::class, 'showLogin'])->name('auth.login.form');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('auth.login');
+Route::get('/register', [AuthController::class, 'showRegister'])->name('auth.register.form');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1')->name('auth.register');
+Route::get('/account', [AuthController::class, 'account'])->name('auth.account');
+Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+Route::post('/offline/work-sessions/sync', [OfflineWorkSessionController::class, 'sync'])->name('offline.work_sessions.sync');
+
 Route::get('/dashboard/tools', [HomeController::class, 'legacy'])->name('dashboard.tools');
 
 Route::post('/behavior/events', [BehaviorEventController::class, 'store'])->name('behavior_events.store');

@@ -36,10 +36,13 @@ class WorkSessionController extends Controller
         }
 
         $actorToken = $identity->resolve($request);
-        $active = WorkSession::query()
-            ->where('actor_token', $actorToken)
-            ->whereIn('status', ['active', 'paused'])
-            ->first();
+        $activeQuery = WorkSession::query()->whereIn('status', ['active', 'paused']);
+        if ($request->user()) {
+            $activeQuery->whereHas('plan', fn ($query) => $query->where('user_id', $request->user()->id));
+        } else {
+            $activeQuery->where('actor_token', $actorToken);
+        }
+        $active = $activeQuery->latest('started_at')->first();
 
         if ($active) {
             return redirect()->route('work_sessions.active', $active)
@@ -299,11 +302,16 @@ class WorkSessionController extends Controller
         BehaviorIdentityService $identity,
         PlanOwnershipService $ownership,
     ): void {
+        $workSession->loadMissing('plan');
+
+        if ($workSession->plan?->user_id !== null) {
+            $ownership->authorizePlan($request, $workSession->plan);
+            return;
+        }
+
         if (! hash_equals($workSession->actor_token, $identity->resolve($request))) {
             abort(403);
         }
-
-        $workSession->loadMissing('plan');
 
         if ($workSession->plan) {
             $ownership->authorizePlan($request, $workSession->plan);

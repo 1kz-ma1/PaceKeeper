@@ -38,6 +38,7 @@ class TemplateController extends Controller
         $ownerToken = Str::random(64);
 
         $plan = Plan::create([
+            'user_id' => $request->user()?->id,
             'owner_token' => $ownerToken,
             'public_slug' => Str::uuid()->toString(),
             'title' => $validated['title'],
@@ -64,7 +65,13 @@ class TemplateController extends Controller
         cookie()->queue(
             'pace_keeper_owner_token_' . $plan->id,
             $ownerToken,
-            60 * 24 * 365
+            60 * 24 * 365,
+            '/',
+            null,
+            app()->environment('production') || $request->isSecure(),
+            true,
+            false,
+            'lax'
         );
 
         return redirect()->route('plans.show', $plan);

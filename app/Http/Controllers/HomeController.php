@@ -8,6 +8,7 @@ use App\Models\WorkLog;
 use App\Services\BehaviorEventLogger;
 use App\Services\BehaviorIdentityService;
 use App\Services\DashboardPresentationService;
+use App\Services\ContinuityService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanProgressService;
 use App\Services\UserBehaviorService;
@@ -24,6 +25,7 @@ class HomeController extends Controller
         UserBehaviorService $behaviorService,
         UserStateService $stateService,
         DashboardPresentationService $dashboardService,
+        ContinuityService $continuityService,
     ) {
         $actorToken = $identity->resolve($request);
         $plans = $ownership->ownedPlans($request, [
@@ -47,6 +49,9 @@ class HomeController extends Controller
             $request->session()->get('dashboard.recommendation_excluded', []),
         );
 
+        $continuity = $continuityService->forPlans($plans, $actorToken);
+        $dashboard['continuity'] = $continuity;
+
         if ($dashboard['recommendation']) {
             $recommendation = $dashboard['recommendation'];
             $eventLogger->recordOnce(
@@ -63,18 +68,9 @@ class HomeController extends Controller
         return view('dashboard.index', compact('dashboard'));
     }
 
-    public function legacy(Request $request, PlanProgressService $progressService)
+    public function legacy(Request $request, PlanProgressService $progressService, PlanOwnershipService $ownership)
     {
-        $ownedPlans = Plan::with(['tasks', 'workLogs'])
-            ->latest()
-            ->get()
-            ->toBase()
-            ->filter(function (Plan $plan) use ($request) {
-                $cookieToken = $request->cookie('pace_keeper_owner_token_' . $plan->id);
-
-                return $cookieToken && hash_equals($plan->owner_token, $cookieToken);
-            })
-            ->values();
+        $ownedPlans = $ownership->ownedPlans($request, ['tasks', 'workLogs']);
 
         $planProgressItems = $ownedPlans
             ->map(function (Plan $plan) use ($progressService) {

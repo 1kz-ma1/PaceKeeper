@@ -274,3 +274,136 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 });
+
+// -----------------------------------------------------------------------------
+// Instant Start: persist a safe client-side snapshot and expose sync state.
+// -----------------------------------------------------------------------------
+const offlineDbName = 'pacekeeper-offline-v1';
+const offlineStoreName = 'state';
+
+function openOfflineDb() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(offlineDbName, 1);
+        request.onupgradeneeded = () => {
+            if (!request.result.objectStoreNames.contains(offlineStoreName)) {
+                request.result.createObjectStore(offlineStoreName);
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function writeOfflineState(key, value) {
+    const db = await openOfflineDb();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(offlineStoreName, 'readwrite');
+        tx.objectStore(offlineStoreName).put(value, key);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+
+async function readOfflineState(key) {
+    const db = await openOfflineDb();
+    return await new Promise((resolve, reject) => {
+        const tx = db.transaction(offlineStoreName, 'readonly');
+        const request = tx.objectStore(offlineStoreName).get(key);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function deleteOfflineState(key) {
+    const db = await openOfflineDb();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(offlineStoreName, 'readwrite');
+        tx.objectStore(offlineStoreName).delete(key);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function clearOfflineState() {
+    await new Promise((resolve) => {
+        const request = indexedDB.deleteDatabase(offlineDbName);
+        request.onsuccess = request.onerror = request.onblocked = () => resolve();
+    });
+}
+
+function setSyncStatus(mode, label) {
+    const root = document.querySelector('[data-sync-status]');
+    if (!root) return;
+    root.dataset.syncMode = mode;
+    const target = root.querySelector('[data-sync-status-label]');
+    if (target) target.textContent = label;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const snapshotElement = document.getElementById('pacekeeper-offline-snapshot');
+    if (snapshotElement && 'indexedDB' in window) {
+        try {
+            const snapshot = JSON.parse(snapshotElement.textContent || '{}');
+            if (snapshot && typeof snapshot === 'object') {
+                await writeOfflineState('latest_snapshot', snapshot);
+            }
+        } catch (_) {}
+    }
+
+    document.querySelectorAll('[data-clear-offline-state]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            if (!('indexedDB' in window)) return;
+            event.preventDefault();
+            await clearOfflineState().catch(() => {});
+            form.submit();
+        });
+    });
+
+    if ('indexedDB' in window) {
+        try {
+            const pendingOfflineSession = await readOfflineState('offline_session');
+            if (pendingOfflineSession?.ended_at && csrfToken) {
+                const response = await fetch('/offline/work-sessions/sync', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        client_session_id: pendingOfflineSession.client_session_id,
+                        task_id: pendingOfflineSession.task_id,
+                        started_at: pendingOfflineSession.started_at,
+                        ended_at: pendingOfflineSession.ended_at,
+                        actual_seconds: pendingOfflineSession.actual_seconds,
+                        intended_minutes: null,
+                    }),
+                });
+                if (response.ok) {
+                    await deleteOfflineState('offline_session');
+                    setSyncStatus('online', 'オフライン作業を同期済み');
+                }
+            } else if (pendingOfflineSession && !pendingOfflineSession.ended_at) {
+                const banner = document.createElement('a');
+                banner.href = '/offline.html';
+                banner.className = 'offline-session-banner';
+                banner.textContent = 'オフラインで計測中 · タイマーへ戻る';
+                document.body.appendChild(banner);
+            }
+        } catch (_) {}
+    }
+
+    const updateNetworkState = () => {
+        if (!navigator.onLine) {
+            setSyncStatus('offline', 'オフライン');
+            return;
+        }
+        setSyncStatus('online', 'オンライン');
+    };
+
+    window.addEventListener('online', updateNetworkState);
+    window.addEventListener('offline', updateNetworkState);
+    updateNetworkState();
+});

@@ -9,6 +9,7 @@ use App\Models\WorkLog;
 use App\Services\PlanProgressService;
 use App\Services\PlanTimelineService;
 use Carbon\Carbon;
+use App\Services\PlanOwnershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -377,6 +378,7 @@ class ChatController extends Controller
             if ($flow === 'plan') {
                 $ownerToken = Str::random(64);
                 $plan = Plan::create([
+                    'user_id' => $request->user()?->id,
                     'owner_token' => $ownerToken,
                     'public_slug' => Str::uuid()->toString(),
                     'title' => $answers['title'],
@@ -390,7 +392,13 @@ class ChatController extends Controller
                 cookie()->queue(
                     'pace_keeper_owner_token_' . $plan->id,
                     $ownerToken,
-                    60 * 24 * 365
+                    60 * 24 * 365,
+                    '/',
+                    null,
+                    app()->environment('production') || $request->isSecure(),
+                    true,
+                    false,
+                    'lax'
                 );
 
                 $result = [
@@ -1246,26 +1254,13 @@ PROMPT;
 
     private function ownedPlans(Request $request, array $with = []): Collection
     {
-        return Plan::with($with)
-            ->latest()
-            ->get()
-            ->toBase()
-            ->filter(function (Plan $plan) use ($request) {
-                $cookieToken = $request->cookie('pace_keeper_owner_token_' . $plan->id);
-
-                return $cookieToken && hash_equals($plan->owner_token, $cookieToken);
-            })
-            ->values();
+        return app(PlanOwnershipService::class)->ownedPlans($request, $with);
     }
 
     private function findOwnedPlan(Request $request, int $planId, array $with = []): Plan
     {
         $plan = Plan::with($with)->findOrFail($planId);
-        $ownerToken = $request->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この計画を操作する権限がありません。');
-        }
+        app(PlanOwnershipService::class)->authorizePlan($request, $plan);
 
         return $plan;
     }

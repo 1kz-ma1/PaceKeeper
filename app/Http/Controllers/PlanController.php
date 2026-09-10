@@ -3,8 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plan;
+use App\Services\BehaviorIdentityService;
+use App\Services\ContinuityService;
+use App\Services\PlanOwnershipService;
 use App\Services\PlanProgressService;
 use App\Services\PlanTimelineService;
+use App\Services\RecommendationService;
+use App\Services\RoadmapService;
+use App\Services\UserBehaviorService;
+use App\Services\UserStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -27,8 +34,8 @@ class PlanController extends Controller
         ]);
 
         $ownerToken = Str::random(64);
-
         $plan = Plan::create([
+            'user_id' => $request->user()?->id,
             'owner_token' => $ownerToken,
             'public_slug' => Str::uuid()->toString(),
             'title' => $validated['title'],
@@ -39,22 +46,30 @@ class PlanController extends Controller
             'is_public' => $request->boolean('is_public'),
         ]);
 
-        cookie()->queue(
-            'pace_keeper_owner_token_' . $plan->id,
-            $ownerToken,
-            60 * 24 * 365
-        );
+        cookie()->queue('pace_keeper_owner_token_' . $plan->id, $ownerToken, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
 
-        return redirect()
-            ->route('plans.ai_task_assistant.show', $plan)
+        return redirect()->route('plans.ai_task_assistant.show', $plan)
             ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
     }
 
-    public function show(Plan $plan, PlanProgressService $progressService, PlanTimelineService $timelineService)
-    {
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
+    public function show(
+        Request $request,
+        Plan $plan,
+        PlanProgressService $progressService,
+        PlanTimelineService $timelineService,
+        PlanOwnershipService $ownership,
+        BehaviorIdentityService $identity,
+        UserBehaviorService $behaviorService,
+        UserStateService $stateService,
+        RecommendationService $recommendationService,
+        RoadmapService $roadmapService,
+        ContinuityService $continuityService,
+    ) {
+        $canEdit = $ownership->owns($request, $plan);
 
-        $canEdit = $ownerToken && hash_equals($plan->owner_token, $ownerToken);
+        if (! $plan->is_public && ! $canEdit) {
+            abort(404);
+        }
 
         $plan->load([
             'tasks' => fn ($query) => $query->with('prerequisite')->orderBy('sort_order')->orderBy('id'),
@@ -66,13 +81,42 @@ class PlanController extends Controller
 
         $progress = $progressService->calculate($plan);
         $timeline = $timelineService->build($plan);
+        $recommendation = null;
+        $continuity = null;
 
-        return view('plans.show', compact('plan', 'progress', 'timeline', 'canEdit'));
+        if ($canEdit) {
+            $actorToken = $identity->resolve($request);
+            $plans = collect([$plan]);
+            $baseline = $behaviorService->baseline($actorToken);
+            $state = $stateService->calculate($actorToken, $baseline, $plans);
+            $recommendation = $recommendationService->recommend(
+                $plans,
+                $state,
+                actorToken: $actorToken,
+                preferredPlanId: $plan->id,
+            );
+            $continuity = $continuityService->forPlan($plan, $actorToken);
+        }
+
+        $roadmap = $roadmapService->build(
+            $plan,
+            $recommendation?->task?->id,
+            $continuity['task_id'] ?? null,
+        );
+
+        return view('plans.show', compact('plan', 'progress', 'timeline', 'canEdit', 'recommendation', 'continuity', 'roadmap'));
     }
 
-    public function update(Request $request, Plan $plan)
+    public function edit(Request $request, Plan $plan, PlanOwnershipService $ownership)
     {
-        $this->authorizeOwner($plan);
+        $ownership->authorizePlan($request, $plan);
+
+        return view('plans.edit', compact('plan'));
+    }
+
+    public function update(Request $request, Plan $plan, PlanOwnershipService $ownership)
+    {
+        $ownership->authorizePlan($request, $plan);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -92,31 +136,14 @@ class PlanController extends Controller
             'is_public' => $request->boolean('is_public'),
         ]);
 
-        return redirect()->route('plans.show', $plan);
+        return redirect()->route('plans.show', $plan)->with('success', '計画を更新しました。');
     }
 
-    public function destroy(Plan $plan)
+    public function destroy(Request $request, Plan $plan, PlanOwnershipService $ownership)
     {
-        $this->authorizeOwner($plan);
-
+        $ownership->authorizePlan($request, $plan);
         $plan->delete();
 
-        return redirect()->route('home');
-    }
-
-    private function authorizeOwner(Plan $plan): void
-    {
-        $ownerToken = request()->cookie('pace_keeper_owner_token_' . $plan->id);
-
-        if (! $ownerToken || ! hash_equals($plan->owner_token, $ownerToken)) {
-            abort(403, 'この計画を編集する権限がありません。');
-        }
-    }
-
-    public function edit(Plan $plan)
-    {
-        $this->authorizeOwner($plan);
-
-        return view('plans.edit', compact('plan'));
+        return redirect()->route('home')->with('success', '計画を削除しました。');
     }
 }
