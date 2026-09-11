@@ -23,8 +23,7 @@
         };
     @endphp
     <section class="mb-8">
-        <p class="mb-2 text-sm font-semibold text-slate-500">Public Plan Detail</p>
-
+        
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">
             {{ $plan->title }}
         </h1>
@@ -203,8 +202,8 @@
     </section>
 
     <div class="mt-8">
-        <a href="{{ route('public_plans.index') }}" class="text-sm font-medium text-slate-700 hover:underline">
-            公開計画一覧へ戻る
+        <a href="{{ route('home') }}" class="text-sm font-medium text-slate-700 hover:underline">
+            PaceKeeperへ
         </a>
     </div>
 @endsection

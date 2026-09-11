@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#020617">
+    <meta name="robots" content="index,follow">
+    <meta name="description" content="PaceKeeper - いつものAIと計画をつなぎ、今日やることまで整理する。">
+    <title>PaceKeeper</title>
+    <link rel="icon" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <main class="welcome-shell">
+        <section class="brand" aria-label="PaceKeeper">
+            <img src="./icon-192.png" alt="" class="brand-icon" width="72" height="72">
+            <div>
+                <p class="eyebrow">PACEKEEPER</p>
+                <h1>自分のペースで、前へ。</h1>
+            </div>
+        </section>
+
+        <section class="welcome-card" aria-live="polite">
+            <div class="loader-wrap" aria-hidden="true">
+                <span class="loader"></span>
+                <span class="loader-glow"></span>
+            </div>
+
+            <div class="hint-stage" data-hint-stage>
+                <article class="hint is-active" data-hint>
+                    <p class="hint-kicker">いつものAIを、そのまま</p>
+                    <h2>AIを選び直さなくて大丈夫。</h2>
+                    <p>ChatGPT、Gemini、Claudeなど、普段使っているAIとの相談をPaceKeeperにつなげられます。</p>
+                </article>
+                <article class="hint" data-hint>
+                    <p class="hint-kicker">相談したら、計画へ戻す</p>
+                    <h2>会話で終わらせず、次の行動へ。</h2>
+                    <p>AIと決めた内容をタスクとロードマップに反映し、次に何をするかを見える形にします。</p>
+                </article>
+                <article class="hint" data-hint>
+                    <p class="hint-kicker">迷った日は「今日」だけ</p>
+                    <h2>考える負担を減らして始める。</h2>
+                    <p>今の計画と実績から候補を絞り、そのままタイマーを始められます。</p>
+                </article>
+            </div>
+
+            <div class="hint-dots" aria-hidden="true">
+                <span class="is-active" data-hint-dot></span>
+                <span data-hint-dot></span>
+                <span data-hint-dot></span>
+            </div>
+
+            <div class="ready-area">
+                <p class="status" data-status>アプリを準備しています…</p>
+                <button type="button" class="open-button" data-open disabled>PaceKeeperを開く</button>
+                <button type="button" class="skip-wait" data-open-anyway>待たずに開く</button>
+            </div>
+        </section>
+
+        <p class="footnote">準備ができるまで、PaceKeeperの使い方を少しだけ紹介します。</p>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>

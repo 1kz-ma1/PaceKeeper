@@ -18,19 +18,44 @@ use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\WorkSessionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OfflineWorkSessionController;
+use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\AdminFeedbackController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\RoadmapController;
+use App\Http\Controllers\TimelineController;
+use App\Http\Controllers\OnboardingController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-Route::get('/health', fn () => response()->noContent())->name('health');
-Route::get('/login', [AuthController::class, 'showLogin'])->name('auth.login.form');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('auth.login');
-Route::get('/register', [AuthController::class, 'showRegister'])->name('auth.register.form');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1')->name('auth.register');
-Route::get('/account', [AuthController::class, 'account'])->name('auth.account');
-Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+Route::get('/health', fn () => response()->noContent()
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Expose-Headers', 'X-PaceKeeper-Ready')
+    ->header('X-PaceKeeper-Ready', '1')
+    ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0'))
+    ->name('health');
+Route::get('/login', [AuthController::class, 'showLogin'])->middleware('guest')->name('auth.login.form');
+Route::post('/login', [AuthController::class, 'login'])->middleware(['guest', 'throttle:10,1'])->name('auth.login');
+Route::get('/register', [AuthController::class, 'showRegister'])->middleware('guest')->name('auth.register.form');
+Route::post('/register', [AuthController::class, 'register'])->middleware(['guest', 'throttle:6,1'])->name('auth.register');
+Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->middleware('guest')->name('password.request');
+Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware(['guest', 'throttle:6,1'])->name('password.email');
+Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->middleware('guest')->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['guest', 'throttle:6,1'])->name('password.update');
+Route::get('/account', [AuthController::class, 'account'])->middleware('auth')->name('auth.account');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
 Route::post('/offline/work-sessions/sync', [OfflineWorkSessionController::class, 'sync'])->name('offline.work_sessions.sync');
+Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('throttle:12,1')->name('feedback.store');
+Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->middleware('throttle:30,1')->name('onboarding.complete');
+Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->middleware('throttle:30,1')->name('onboarding.skip');
+Route::get('/admin/feedback/login', [AdminFeedbackController::class, 'login'])->name('admin.feedback.login');
+Route::post('/admin/feedback/login', [AdminFeedbackController::class, 'authenticate'])->middleware('throttle:10,1')->name('admin.feedback.authenticate');
+Route::get('/admin/feedback', [AdminFeedbackController::class, 'index'])->name('admin.feedback.index');
+Route::patch('/admin/feedback/{feedback}/status', [AdminFeedbackController::class, 'updateStatus'])->name('admin.feedback.status');
 
 Route::get('/dashboard/tools', [HomeController::class, 'legacy'])->name('dashboard.tools');
+Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
+Route::get('/roadmap', [RoadmapController::class, 'index'])->name('roadmap.index');
+Route::get('/timeline', [TimelineController::class, 'index'])->name('timeline.index');
 
 Route::post('/behavior/events', [BehaviorEventController::class, 'store'])->name('behavior_events.store');
 Route::post('/recommendations/alternative', [RecommendationController::class, 'alternative'])->name('recommendations.alternative');

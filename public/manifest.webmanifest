@@ -1,7 +1,8 @@
 {
+  "id": "/",
   "name": "PaceKeeper",
   "short_name": "PaceKeeper",
-  "description": "実績に合わせて計画を育て直す進捗管理ツール",
+  "description": "いつものAIと計画をつなぎ、今日やることまで整理するPaceKeeper",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

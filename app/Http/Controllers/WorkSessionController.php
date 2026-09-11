@@ -26,7 +26,7 @@ class WorkSessionController extends Controller
         $validated = $request->validate([
             'task_id' => ['required', 'integer', 'min:1'],
             'intended_minutes' => ['nullable', 'integer', 'min:5', 'max:480'],
-            'source' => ['required', 'in:dashboard,navigation,plan'],
+            'source' => ['required', 'in:dashboard,navigation,plan,roadmap'],
         ]);
         $task = Task::with('plan')->findOrFail($validated['task_id']);
         $ownership->authorizeTask($request, $task);

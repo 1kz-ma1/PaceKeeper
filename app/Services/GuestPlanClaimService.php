@@ -26,6 +26,13 @@ class GuestPlanClaimService
                 $plan->forceFill(['user_id' => $user->id])->save();
                 $claimed++;
             }
+
+            if ((int) $plan->user_id === (int) $user->id) {
+                // Once a plan is account-owned, the legacy Guest ownership
+                // cookie is no longer useful. Remove it so the browser does
+                // not keep stale ownership material indefinitely.
+                cookie()->queue(cookie()->forget((string) $name));
+            }
         }
 
         return $claimed;

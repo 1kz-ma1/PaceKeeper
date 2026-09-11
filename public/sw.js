@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'pacekeeper-shell-v3';
+const CACHE_VERSION = 'pacekeeper-shell-v5';
 const STATIC_ASSETS = [
     '/offline.html',
     '/manifest.webmanifest',
@@ -8,7 +8,13 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
     event.waitUntil(caches.open(CACHE_VERSION).then((cache) => cache.addAll(STATIC_ASSETS)));
-    self.skipWaiting();
+});
+
+
+self.addEventListener('message', (event) => {
+    if (event.data?.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 self.addEventListener('activate', (event) => {

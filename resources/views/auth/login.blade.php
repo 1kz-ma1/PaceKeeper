@@ -24,6 +24,7 @@
                 この端末でログイン状態を保持
             </label>
             <button type="submit" class="btn-primary w-full">ログイン</button>
+            <a href="{{ route('password.request') }}" class="block text-center text-sm font-semibold text-sky-300 hover:text-sky-200">パスワードを忘れた場合</a>
         </form>
 
         <p class="mt-6 text-center text-sm text-slate-400">まだアカウントがない場合は <a href="{{ route('auth.register.form') }}" class="font-semibold text-sky-300 hover:text-sky-200">データを保護する</a></p>

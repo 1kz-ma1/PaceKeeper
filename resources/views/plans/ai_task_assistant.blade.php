@@ -6,8 +6,7 @@
     <div class="mx-auto max-w-5xl space-y-8">
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-                <p class="text-sm font-semibold text-sky-600">AI Task Assistant</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900 font-heading">
+                                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900 font-heading">
                     AIで初期計画を生成
                 </h1>
                 <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
@@ -54,13 +53,13 @@
             >{{ $prompt }}</textarea>
 
             <div class="flex flex-wrap gap-3">
-                <button type="button" class="btn-primary" onclick="copyAiPrompt()">
+                <button type="button" class="btn-primary" onclick="copyAiPrompt()" data-onboarding-target="ai-copy">
                     プロンプトをコピー
                 </button>
             </div>
         </section>
 
-        <section class="info-card space-y-4">
+        <section class="info-card space-y-4" data-onboarding-target="ai-import">
             <div>
                 <h2 class="text-xl font-bold text-slate-900 font-heading">
                     2. AI出力JSONから初期計画を作成

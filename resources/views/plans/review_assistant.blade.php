@@ -19,8 +19,7 @@
     <div id="plan-review-root" class="mx-auto max-w-6xl space-y-6">
         <header class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-                <p class="text-sm font-semibold text-sky-600">Adaptive planning assistant</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900 font-heading">計画を更新</h1>
+                                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900 font-heading">計画を更新</h1>
                 <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
                     実績、分かったこと、予定との違い、方針変更をまとめて報告できます。何を変更するべきかは外部AI側で判断し、反映前に差分を確認します。
                 </p>
@@ -106,7 +105,7 @@
                         </div>
                     @else
                         <p class="mt-2 leading-7">
-                            Pace Keeperが現在の計画・Task・最近の実績をまとめます。今回の状況は、普段使っているAIとの会話から確認してもらえます。
+                            Pace Keeperが現在の計画・タスク・最近の実績をまとめます。今回の状況は、普段使っているAIとの会話から確認してもらえます。
                         </p>
                         <div class="assistant-notice assistant-notice-info mt-4">
                             入力は必須ではありません。空欄なら、AIが現在の会話を使い、必要な場合だけ「今回何がありましたか？」と聞くよう指示します。
@@ -159,7 +158,7 @@
                     <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
                         <p class="assistant-speaker">Pace Keeper サポーター</p>
                         <p class="mt-2 leading-7">
-                            現在の計画、Task、最近の実績@if ($workSessionContext) と今回のWorkSession事実@endif をまとめました。次の内容を普段使っているAIへ送ってください。
+                            現在の計画、タスク、最近の実績@if ($workSessionContext) と今回の作業記録@endif をまとめました。次の内容を普段使っているAIへ送ってください。
                         </p>
 
                         <textarea id="reviewPrompt" class="form-control mt-4 min-h-[420px] font-mono text-xs" readonly>{{ $draft['prompt'] }}</textarea>
@@ -258,12 +257,24 @@
                             </div>
                         @endif
 
+                        <details class="mt-5 rounded-2xl border border-slate-700 bg-slate-950/55 p-4">
+                            <summary class="cursor-pointer font-bold text-slate-200">変更前のRoadmapを見る</summary>
+                            <div class="mt-4 opacity-80">
+                                @include('plans.partials.roadmap', [
+                                    'roadmap' => $proposal['roadmap_before'] ?? ['nodes' => []],
+                                    'roadmapPlan' => $plan,
+                                    'roadmapCanEdit' => false,
+                                    'roadmapMode' => 'preview',
+                                ])
+                            </div>
+                        </details>
+
                         <div class="mt-5 rounded-2xl border border-emerald-300/20 bg-slate-950/80 p-4 sm:p-5">
                             <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">Roadmap Preview</p>
+                                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">反映後のロードマップ</p>
                                     <h3 class="mt-1 text-lg font-bold text-slate-50">反映後の道筋</h3>
-                                    <p class="mt-1 text-sm leading-6 text-slate-400">一覧ではなく、Taskの追加・具体化・中止・順序変更をRoadmap上で確認します。</p>
+                                    <p class="mt-1 text-sm leading-6 text-slate-400">マップで変更後の流れを確認できます。必要ならリストにも切り替えられます。</p>
                                 </div>
                             </div>
                             @include('plans.partials.roadmap', [

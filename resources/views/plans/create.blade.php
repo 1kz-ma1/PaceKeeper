@@ -4,15 +4,12 @@
 
 @section('content')
     <section class="mb-8">
-        <p class="mb-2 text-sm font-semibold text-slate-500">Create Plan</p>
-
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">
-            計画作成
+            新しい計画
         </h1>
 
         <p class="mt-3 max-w-3xl leading-7 text-slate-600">
-            目標・開始日・期限・カテゴリなどを入力して、新しい計画を作成します。
-            作成後はタスクや作業ログを追加し、必要作業ペースを確認できます。
+            まずは分かる範囲で大丈夫です。あとからいつでも変えられます。
         </p>
     </section>
 
@@ -30,7 +27,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('plans.store') }}" method="POST" class="space-y-6">
+            <form action="{{ route('plans.store') }}" method="POST" class="space-y-6" data-onboarding-target="plan-form">
                 @csrf
 
                 <div>
@@ -82,6 +79,8 @@
                     </select>
                 </div>
 
+                @include('plans.partials.visual-picker')
+
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label for="start_date" class="mb-2 block text-sm font-medium text-slate-700">
@@ -92,7 +91,7 @@
                             id="start_date"
                             type="date"
                             name="start_date"
-                            value="{{ old('start_date') }}"
+                            value="{{ old('start_date', now()->toDateString()) }}"
                             required
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
                         >
@@ -130,7 +129,7 @@
                             </span>
 
                             <span class="mt-1 block text-sm leading-6 text-slate-600">
-                                公開すると、他の人が公開計画一覧や共有URLからこの計画を閲覧できるようになります。
+                                公開すると、共有URLを知っている人がこの計画を見られます。
                                 公開ページでは編集や作業ログの追加はできません。
                             </span>
                         </span>
@@ -141,6 +140,7 @@
                     <button
                         type="submit"
                         class="btn-primary"
+                        data-onboarding-target="create-plan-submit"
                     >
                         計画を作成する
                     </button>
@@ -174,12 +174,12 @@
                 </li>
 
                 <li class="rounded-lg bg-slate-50 p-3">
-                    公開設定をONにすると、公開計画として他の人に共有できます。
+                    必要なら共有URLで他の人に見せられます。
                 </li>
             </ul>
 
             <div class="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-                計画を作成した後、「AIで初期計画を生成」から、あなたの現在地に合うタスク構成を作れます。
+                計画を作ったあと、必要ならAIと一緒にタスクを整えられます。
             </div>
         </aside>
     </section>
