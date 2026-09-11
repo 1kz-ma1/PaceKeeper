@@ -16,6 +16,7 @@ class DashboardPresentationService
     public function __construct(
         private readonly PlanProgressService $progressService,
         private readonly RecommendationService $recommendationService,
+        private readonly RoadmapService $roadmapService,
     ) {}
 
     public function build(
@@ -46,16 +47,29 @@ class DashboardPresentationService
                 actorToken: $actorToken,
                 preferredPlanId: $plan->id,
             );
+            $previousSession = $previousSessions->get($plan->id);
+            $roadmap = $this->roadmapService->build(
+                $plan,
+                $recommendation?->task?->id,
+                $previousSession?->task_id,
+            );
 
             return [
                 'plan' => $plan,
                 'progress' => $progress,
                 'today_minutes' => $todayMinutes,
-                'previous_session' => $previousSessions->get($plan->id),
+                'previous_session' => $previousSession,
                 'recent_logs' => $plan->workLogs->sortByDesc('worked_on')->take(3)->values(),
                 'recommendation' => $recommendation,
+                'roadmap' => $roadmap,
             ];
         })->values();
+
+        $recentActivity = $planTabs
+            ->flatMap(fn (array $item) => $item['recent_logs']->map(fn ($log) => ['plan' => $item['plan'], 'log' => $log]))
+            ->sortByDesc(fn (array $item) => sprintf('%s-%010d', $item['log']->worked_on?->format('Y-m-d') ?? '0000-00-00', $item['log']->id))
+            ->take(6)
+            ->values();
 
         $totalDailyRequired = (int) $planTabs->sum(fn ($item) => $item['progress']['daily_required_minutes']);
         $todayMinutes = (int) $planTabs->sum('today_minutes');
@@ -110,6 +124,7 @@ class DashboardPresentationService
         return [
             'plans' => $plans,
             'plan_tabs' => $planTabs,
+            'recent_activity' => $recentActivity,
             'total_daily_required_minutes' => $totalDailyRequired,
             'today_minutes' => $todayMinutes,
             'remaining_minutes' => $remainingMinutes,

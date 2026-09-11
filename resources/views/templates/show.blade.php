@@ -103,7 +103,7 @@
                         <span>
                             <span class="block font-medium text-slate-900">作成した計画を公開する</span>
                             <span class="mt-1 block text-sm leading-6 text-slate-600">
-                                公開すると、他の人が公開計画一覧や共有URLから閲覧できます。
+                                公開すると、共有URLを知っている人が閲覧できます。
                             </span>
                         </span>
                     </label>

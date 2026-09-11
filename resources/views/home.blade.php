@@ -286,6 +286,18 @@
 
                 <p class="mt-4 leading-7 text-slate-600">{{ $dashboardJsonProposal['summary'] }}</p>
 
+                <details class="mt-5 rounded-2xl border border-slate-300 bg-slate-50 p-4">
+                    <summary class="cursor-pointer font-bold text-slate-800">変更前のRoadmap</summary>
+                    <div class="mt-4 rounded-2xl bg-slate-950 p-4 text-slate-100 opacity-85">
+                        @include('plans.partials.roadmap', [
+                            'roadmap' => $dashboardJsonProposal['roadmap_before'] ?? ['nodes' => []],
+                            'roadmapPlan' => $dashboardJsonPlan,
+                            'roadmapCanEdit' => false,
+                            'roadmapMode' => 'preview',
+                        ])
+                    </div>
+                </details>
+
                 <div class="mt-5 rounded-2xl border border-emerald-400/20 bg-slate-950 p-4 text-slate-100">
                     <p class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">Roadmap Preview</p>
                     <h4 class="mt-1 text-lg font-bold">反映後の道筋</h4>

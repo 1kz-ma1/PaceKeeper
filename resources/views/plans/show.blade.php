@@ -33,14 +33,21 @@
         <div class="assistant-notice assistant-notice-info mb-6">{{ session('status') }}</div>
     @endif
 
-    <section class="mb-8">
+    <section class="mb-8 plan-identity-shell" data-plan-accent="{{ $plan->accentKey() }}">
         <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <p class="mb-2 text-sm font-semibold text-slate-500">Plan Detail</p>
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900">{{ $plan->title }}</h1>
-                <p class="mt-3 max-w-3xl leading-7 text-slate-600">
-                    {{ $plan->description ?? '説明はまだ設定されていません。' }}
-                </p>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-3">
+                    <span class="plan-identity-icon" aria-hidden="true">{{ $plan->displayIcon() }}</span>
+                    <div class="min-w-0">
+                        <h1 class="text-3xl font-bold tracking-tight text-slate-50">{{ $plan->title }}</h1>
+                    </div>
+                </div>
+                <div class="mt-3 max-w-3xl">
+                    @include('layouts.partials.collapsible-text', [
+                        'text' => $plan->description,
+                        'toneClass' => 'leading-7 text-slate-300',
+                    ])
+                </div>
 
                 <div class="mt-4 flex flex-wrap gap-2">
                     <span class="badge badge-slate">{{ $plan->category ?? '未設定' }}</span>
@@ -51,14 +58,29 @@
             </div>
 
             @if ($canEdit ?? false)
-                <div class="flex flex-wrap gap-3">
-                    <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary">計画を更新</a>
-                    <form method="POST" action="{{ route('chat.start', 'ai_context') }}">
-                        @csrf
-                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
-                        <button type="submit" class="btn-secondary">AIに現状を共有</button>
-                    </form>
-                    <a href="{{ route('plans.edit', $plan) }}" class="btn-secondary">計画を編集</a>
+                <div class="w-full md:w-auto">
+                    <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary w-full md:w-auto">計画を更新</a>
+                    <div class="mt-2 hidden flex-wrap gap-2 md:flex">
+                        <form method="POST" action="{{ route('chat.start', 'ai_context') }}">
+                            @csrf
+                            <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                            <button type="submit" class="btn-secondary">AIに現状を共有</button>
+                        </form>
+                        <a href="{{ route('plans.edit', $plan) }}#plan-design" class="btn-secondary">🎨 デザイン</a>
+                        <a href="{{ route('plans.edit', $plan) }}" class="btn-secondary">計画を編集</a>
+                    </div>
+                    <details class="plan-secondary-actions mt-2 md:hidden">
+                        <summary>その他の操作</summary>
+                        <div class="mt-2 grid gap-2">
+                            <form method="POST" action="{{ route('chat.start', 'ai_context') }}">
+                                @csrf
+                                <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+                                <button type="submit" class="btn-secondary w-full">AIに現状を共有</button>
+                            </form>
+                            <a href="{{ route('plans.edit', $plan) }}#plan-design" class="btn-secondary w-full">🎨 デザイン</a>
+                            <a href="{{ route('plans.edit', $plan) }}" class="btn-secondary w-full">計画を編集</a>
+                        </div>
+                    </details>
                 </div>
             @endif
         </div>
@@ -67,12 +89,8 @@
     @if ($canEdit ?? false)
         <section class="mb-8 adaptive-entry-card">
             <div>
-                <p class="text-sm font-semibold text-sky-600">Adaptive workflow</p>
-                <h2 class="mt-1 text-xl font-bold text-slate-900">計画外の作業も、そのまま記録できます</h2>
-                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
-                    作業ログや新規タスクを手動で計画へ合わせるのではなく、実際に行ったことを入力してください。
-                    外部AIの提案を確認してから、ログ追加・進捗更新・タスク追加・タスク中止をまとめて反映できます。
-                </p>
+                <h2 class="mt-1 text-xl font-bold text-slate-900">計画外の作業も記録できます</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">やったことをそのまま入力すれば、あとから計画に反映できます。</p>
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-primary">実績・方針をまとめて更新</a>
@@ -84,13 +102,26 @@
     @endif
 
     @if (($canEdit ?? false) && $continuity)
-        <section class="mb-6 continuity-card">
+        <section class="mb-6 continuity-card plan-identity-shell" data-plan-accent="{{ $plan->accentKey() }}">
             <div class="min-w-0">
-                <p class="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">昨日の自分から今日へ</p>
+                <p class="text-xs font-bold uppercase tracking-[0.16em] text-sky-300"><span aria-hidden="true">{{ $plan->displayIcon() }}</span> 昨日の自分から今日へ</p>
                 <h2 class="mt-2 text-lg font-bold text-slate-50">{{ $continuity['task_title'] }}</h2>
                 <p class="mt-2 text-sm leading-6 text-slate-300">
-                    {{ $continuity['next_action_note'] ?: ($continuity['is_active'] ? '進行中のWorkSessionがあります。' : '前回取り組んだTaskです。Roadmapの現在地から続けられます。') }}
+                    {{ $continuity['next_action_note'] ?: ($continuity['is_active'] ? 'いま作業中です。' : '前回の続きから始められます。') }}
                 </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                    @if (! empty($continuity['ended_at']))
+                        <span class="badge badge-slate">前回 {{ $continuity['ended_at']->diffForHumans() }}</span>
+                    @elseif (! empty($continuity['started_at']))
+                        <span class="badge badge-slate">開始 {{ $continuity['started_at']->diffForHumans() }}</span>
+                    @endif
+                    @if ($recommendation?->task?->id === ($continuity['task_id'] ?? null) && $recommendation?->recommendedMinutes)
+                        <span class="badge badge-green">今回 {{ $recommendation->recommendedMinutes }}分</span>
+                    @endif
+                    @if ($continuity['needs_plan_update'])
+                        <span class="badge badge-slate">計画へ未反映</span>
+                    @endif
+                </div>
             </div>
             <div class="mt-4 flex flex-wrap gap-2 sm:mt-0">
                 @if ($continuity['is_active'])
@@ -113,12 +144,12 @@
     <section class="mb-8 page-card roadmap-shell p-4 sm:p-6">
         <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
-                <p class="text-sm font-semibold text-emerald-400">Living Roadmap</p>
+                <p class="text-sm font-semibold text-emerald-400">ロードマップ</p>
                 <h2 class="mt-1 text-2xl font-bold text-slate-50">現在地と、次に進む道</h2>
-                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-400">Taskは固定されたチェックリストではなく、実績に合わせて分解・具体化されるRoadmapとして表示します。今やるべきTaskだけ詳細を開きます。</p>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-400"><span class="md:hidden">今いる場所と、この先を見られます。</span><span class="hidden md:inline">今いる場所と、この先をひとつの流れで見られます。</span></p>
             </div>
             @if ($canEdit ?? false)
-                <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">Roadmapを更新</a>
+                <a href="{{ route('plans.review_assistant.show', $plan) }}" class="btn-secondary">ロードマップを更新</a>
             @endif
         </div>
         @include('plans.partials.roadmap', [
@@ -241,15 +272,25 @@
         </section>
     @endif
 
+    @php
+        $taskModelsById = $plan->tasks->keyBy('id');
+        $orderedTasks = collect($roadmap['nodes'] ?? [])
+            ->pluck('task_id')
+            ->filter()
+            ->map(fn ($taskId) => $taskModelsById->get((int) $taskId))
+            ->filter()
+            ->values();
+    @endphp
+
     <section class="mb-8 page-card p-6 hidden md:block">
         <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-slate-900">詳細Task一覧</h2>
-                <p class="mt-1 text-sm text-slate-500">追加や進捗・方針の更新は「計画を更新」からまとめて行い、ここでは確認・編集・削除を行います。</p>
+                <h2 class="text-2xl font-bold text-slate-900">タスク一覧</h2>
+                <p class="mt-1 text-sm text-slate-500">今やる順に並んでいます。</p>
             </div>
         </div>
 
-        @if ($plan->tasks->isEmpty())
+        @if ($orderedTasks->isEmpty())
             <div class="empty-state">
                 <p class="font-bold text-slate-900">まだタスクはありません。</p>
                 @if ($canEdit ?? false)
@@ -262,7 +303,7 @@
             </div>
         @else
             <div class="space-y-4">
-                @foreach ($plan->tasks as $task)
+                @foreach ($orderedTasks as $task)
                     @php
                         $taskProgressColorClass = match ($task->status) {
                             'done' => 'progress-green',
@@ -308,7 +349,7 @@
                                             @csrf
                                             <input type="hidden" name="task_id" value="{{ $task->id }}">
                                             <input type="hidden" name="source" value="plan">
-                                            <button type="submit" class="btn-primary px-3 py-2 text-sm">このTaskを始める</button>
+                                            <button type="submit" class="btn-primary px-3 py-2 text-sm">このタスクを始める</button>
                                         </form>
                                     @endif
 
@@ -336,7 +377,7 @@
     </section>
 
     <section class="page-card p-6">
-        <h2 class="text-2xl font-bold text-slate-900">Timeline</h2>
+        <h2 class="text-2xl font-bold text-slate-900">これまでの記録</h2>
         <p class="mt-1 text-sm text-slate-500">作業結果と計画変更を、現在地がどう変わったかと一緒に時系列で残します。</p>
 
         @if ($timeline->isEmpty())

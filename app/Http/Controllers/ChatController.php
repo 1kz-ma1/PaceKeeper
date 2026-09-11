@@ -389,17 +389,19 @@ class ChatController extends Controller
                     'is_public' => (bool) $answers['is_public'],
                 ]);
 
-                cookie()->queue(
-                    'pace_keeper_owner_token_' . $plan->id,
-                    $ownerToken,
-                    60 * 24 * 365,
-                    '/',
-                    null,
-                    app()->environment('production') || $request->isSecure(),
-                    true,
-                    false,
-                    'lax'
-                );
+                if (! $request->user()) {
+                    cookie()->queue(
+                        'pace_keeper_owner_token_' . $plan->id,
+                        $ownerToken,
+                        60 * 24 * 365,
+                        '/',
+                        null,
+                        app()->environment('production') || $request->isSecure(),
+                        true,
+                        false,
+                        'lax'
+                    );
+                }
 
                 $result = [
                     'message' => '新しい計画を作成しました。AIへ計画全体を共有するプロンプトもチャットから生成できます。',

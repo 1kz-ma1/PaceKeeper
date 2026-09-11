@@ -13,10 +13,11 @@ class RoadmapService
         $plan->loadMissing(['tasks.prerequisite']);
 
         $nodes = $plan->tasks
-            ->sortBy(fn (Task $task) => sprintf('%010d-%010d', $task->sort_order ?? 0, $task->id))
             ->values()
             ->map(fn (Task $task) => $this->taskNode($task, $currentTaskId, $lastWorkedTaskId))
             ->all();
+
+        $nodes = $this->executionOrder($nodes);
 
         return $this->summarize($nodes);
     }
@@ -136,10 +137,11 @@ class RoadmapService
         }
 
         $nodes = collect($tasks)
-            ->sortBy(fn (array $task) => sprintf('%010d-%010d', $task['sort_order'] ?? 0, ($task['task_id'] ?? 1000000 + abs($task['virtual_id'] ?? 0))))
             ->values()
             ->map(fn (array $task) => $this->arrayNode($task))
             ->all();
+
+        $nodes = $this->executionOrder($nodes);
 
         return $this->summarize($nodes, preview: true);
     }
@@ -194,6 +196,90 @@ class RoadmapService
     }
 
 
+    /**
+     * Build a stable execution order instead of exposing database registration order.
+     *
+     * Dependencies are always respected first. Among tasks that can be placed at the
+     * same point in the graph we prefer completed history, the current/doing task,
+     * higher priority (1 is highest), lower activation cost, then the old sort_order
+     * only as a final tie-breaker. Cycles or broken dependency data degrade safely to
+     * the same ranking instead of making the Roadmap disappear.
+     */
+    private function executionOrder(array $nodes): array
+    {
+        $remaining = collect($nodes)->keyBy(fn (array $node) => (string) ($node['key'] ?? uniqid('node-', true)));
+        $taskKeyById = $remaining
+            ->filter(fn (array $node) => ! empty($node['task_id']))
+            ->mapWithKeys(fn (array $node, string $key) => [(int) $node['task_id'] => $key])
+            ->all();
+        $ordered = [];
+        $placedKeys = [];
+
+        while ($remaining->isNotEmpty()) {
+            $eligible = $remaining->filter(function (array $node) use ($taskKeyById, $placedKeys) {
+                $dependencyId = (int) ($node['depends_on_task_id'] ?? 0);
+                if ($dependencyId <= 0 || ! isset($taskKeyById[$dependencyId])) {
+                    return true;
+                }
+
+                return isset($placedKeys[$taskKeyById[$dependencyId]]);
+            });
+
+            // A dependency cycle should never break rendering. Pick from the remaining
+            // nodes using the normal execution ranking and continue deterministically.
+            if ($eligible->isEmpty()) {
+                $eligible = $remaining;
+            }
+
+            $next = $eligible->sort(function (array $left, array $right) {
+                return $this->compareExecutionRank($left, $right);
+            })->first();
+
+            $nextKey = (string) ($next['key'] ?? '');
+            $ordered[] = $next;
+            $placedKeys[$nextKey] = true;
+            $remaining->forget($nextKey);
+        }
+
+        return array_values($ordered);
+    }
+
+    private function compareExecutionRank(array $left, array $right): int
+    {
+        $leftRank = $this->executionRank($left);
+        $rightRank = $this->executionRank($right);
+
+        foreach (array_keys($leftRank) as $key) {
+            $comparison = $leftRank[$key] <=> $rightRank[$key];
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+        }
+
+        return 0;
+    }
+
+    private function executionRank(array $node): array
+    {
+        $status = (string) ($node['status'] ?? 'todo');
+        $isCurrent = (bool) ($node['is_current'] ?? false) || $status === 'doing';
+        $statusRank = match (true) {
+            $status === 'done' => 0,
+            $isCurrent => 1,
+            $status === 'cancelled' => 4,
+            default => 2,
+        };
+
+        return [
+            'status' => $statusRank,
+            // priority 1 is the strongest priority in PaceKeeper.
+            'priority' => max(1, min(5, (int) ($node['priority'] ?? 3))),
+            'activation' => max(1, min(5, (int) ($node['activation_cost'] ?? 3))),
+            'sort' => (int) ($node['sort_order'] ?? PHP_INT_MAX),
+            'id' => (int) ($node['task_id'] ?? (1000000 + abs((int) ($node['virtual_id'] ?? 0)))),
+        ];
+    }
+
     private function enrichLineage(array $nodes): array
     {
         $titlesById = collect($nodes)
@@ -245,9 +331,31 @@ class RoadmapService
             $nodes = collect($nodes)->map(function (array $node) use ($current) {
                 $node['is_current'] = $node['key'] === $current['key'];
                 return $node;
+            })->values()->all();
+
+            $currentIndex = collect($nodes)->search(fn (array $node) => $node['key'] === $current['key']);
+            $nodes = collect($nodes)->values()->map(function (array $node, int $index) use ($currentIndex, $preview) {
+                $distance = $currentIndex === false ? null : $index - (int) $currentIndex;
+                $node['distance_from_current'] = $distance;
+                $node['is_past_completed'] = $distance !== null && $distance < 0 && ($node['status'] ?? null) === 'done';
+                $node['is_far_future'] = ! $preview
+                    && $distance !== null
+                    && $distance > 2
+                    && ! in_array($node['status'] ?? null, ['done', 'cancelled'], true);
+                $node['execution_phase'] = match (true) {
+                    ($node['status'] ?? null) === 'done' => 'completed',
+                    ($node['status'] ?? null) === 'cancelled' => 'cancelled',
+                    (bool) ($node['is_current'] ?? false) => 'current',
+                    $distance !== null && $distance > 0 && $distance <= 2 => 'next',
+                    default => 'later',
+                };
+                return $node;
             })->all();
+
             $current = collect($nodes)->firstWhere('key', $current['key']);
         }
+
+        $collection = collect($nodes);
 
         return [
             'nodes' => $nodes,

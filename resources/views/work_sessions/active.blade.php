@@ -22,6 +22,7 @@
                     <p
                         class="text-[clamp(4rem,22vw,7rem)] font-black leading-none tracking-tight tabular-nums text-slate-50"
                         data-work-timer
+                        data-onboarding-target="work-timer"
                         data-started-at="{{ $workSession->started_at?->toIso8601String() }}"
                         data-paused-at="{{ $workSession->paused_at?->toIso8601String() }}"
                         data-paused-seconds="{{ $workSession->paused_seconds ?? 0 }}"

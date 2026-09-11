@@ -14,6 +14,8 @@ use App\Services\UserBehaviorService;
 use App\Services\UserStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class PlanController extends Controller
 {
@@ -28,6 +30,9 @@ class PlanController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category' => ['nullable', 'string', 'max:100'],
+            'visual_icon' => ['nullable', 'string', 'max:16'],
+            'accent_key' => ['nullable', Rule::in(Plan::ACCENT_KEYS)],
+            'roadmap_world' => ['nullable', Rule::in(Plan::ROADMAP_WORLDS)],
             'start_date' => ['required', 'date'],
             'deadline' => ['required', 'date', 'after_or_equal:start_date'],
             'is_public' => ['nullable'],
@@ -41,12 +46,17 @@ class PlanController extends Controller
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'category' => $validated['category'] ?? null,
+            'visual_icon' => $validated['visual_icon'] ?? null,
+            'accent_key' => $validated['accent_key'] ?? 'sky',
+            'roadmap_world' => $validated['roadmap_world'] ?? 'default',
             'start_date' => $validated['start_date'],
             'deadline' => $validated['deadline'],
             'is_public' => $request->boolean('is_public'),
         ]);
 
-        cookie()->queue('pace_keeper_owner_token_' . $plan->id, $ownerToken, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
+        if (! $request->user()) {
+            cookie()->queue('pace_keeper_owner_token_' . $plan->id, $ownerToken, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
+        }
 
         return redirect()->route('plans.ai_task_assistant.show', $plan)
             ->with('status', '計画の基本情報を作成しました。続けてAIで初期タスクを生成できます。');
@@ -67,7 +77,11 @@ class PlanController extends Controller
     ) {
         $canEdit = $ownership->owns($request, $plan);
 
-        if (! $plan->is_public && ! $canEdit) {
+        // The numeric Plan detail route contains private operational context
+        // (work logs, adjustments, recommendation state). Public sharing uses
+        // the dedicated random-slug route instead, so non-owners never receive
+        // the full Plan detail even when is_public is enabled.
+        if (! $canEdit) {
             abort(404);
         }
 
@@ -122,18 +136,31 @@ class PlanController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category' => ['nullable', 'string', 'max:100'],
-            'start_date' => ['required', 'date'],
-            'deadline' => ['required', 'date', 'after_or_equal:start_date'],
+            'visual_icon' => ['nullable', 'string', 'max:16'],
+            'accent_key' => ['nullable', Rule::in(Plan::ACCENT_KEYS)],
+            'roadmap_world' => ['nullable', Rule::in(Plan::ROADMAP_WORLDS)],
+            'start_date' => ['nullable', 'date'],
+            'deadline' => ['nullable', 'date'],
             'is_public' => ['nullable'],
         ]);
 
+        $startDate = $validated['start_date'] ?? $plan->start_date?->format('Y-m-d');
+        $deadline = $validated['deadline'] ?? $plan->deadline?->format('Y-m-d');
+
+        if ($startDate && $deadline && Carbon::parse($deadline)->lt(Carbon::parse($startDate))) {
+            return back()->withErrors(['deadline' => '期限は開始日以降にしてください。'])->withInput();
+        }
+
         $plan->update([
             'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'category' => $validated['category'] ?? null,
-            'start_date' => $validated['start_date'],
-            'deadline' => $validated['deadline'],
-            'is_public' => $request->boolean('is_public'),
+            'description' => array_key_exists('description', $validated) ? $validated['description'] : $plan->description,
+            'category' => array_key_exists('category', $validated) ? $validated['category'] : $plan->category,
+            'visual_icon' => array_key_exists('visual_icon', $validated) ? $validated['visual_icon'] : $plan->visual_icon,
+            'accent_key' => $validated['accent_key'] ?? $plan->accentKey(),
+            'roadmap_world' => $validated['roadmap_world'] ?? $plan->roadmapWorld(),
+            'start_date' => $startDate,
+            'deadline' => $deadline,
+            'is_public' => $request->has('is_public') ? $request->boolean('is_public') : $plan->is_public,
         ]);
 
         return redirect()->route('plans.show', $plan)->with('success', '計画を更新しました。');

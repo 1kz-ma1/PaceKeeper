@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Plan;
 use App\Models\Task;
+use App\Models\Feedback;
 use App\Models\User;
 use App\Services\RoadmapService;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -54,6 +57,71 @@ class LivingRoadmapAccountTest extends TestCase
             ->withCookie($cookieName, $plan->owner_token)
             ->get(route('plans.show', $plan))
             ->assertNotFound();
+    }
+
+    public function test_private_account_plan_is_not_visible_to_another_account(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $plan = Plan::create([
+            'user_id' => $owner->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => Str::uuid()->toString(),
+            'title' => 'Owner only',
+            'start_date' => today()->toDateString(),
+            'deadline' => today()->addMonth()->toDateString(),
+            'is_public' => false,
+        ]);
+
+        $this->actingAs($other)
+            ->get(route('plans.show', $plan))
+            ->assertNotFound();
+    }
+
+    public function test_public_plan_full_detail_still_requires_owner_and_public_slug_remains_available(): void
+    {
+        $plan = $this->createGuestPlan('Shared plan');
+        $plan->forceFill(['is_public' => true])->save();
+
+        $this->get(route('plans.show', $plan))->assertNotFound();
+        $this->get(route('public_plans.show', $plan->public_slug))->assertOk();
+    }
+
+    public function test_password_reset_link_can_be_requested(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['email' => 'reset@example.com']);
+
+        $this->post(route('password.email'), ['email' => $user->email])
+            ->assertSessionHas('status');
+
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_feedback_does_not_attach_a_foreign_private_plan(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $plan = Plan::create([
+            'user_id' => $owner->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => Str::uuid()->toString(),
+            'title' => 'Private feedback context',
+            'start_date' => today()->toDateString(),
+            'deadline' => today()->addMonth()->toDateString(),
+            'is_public' => false,
+        ]);
+
+        $this->actingAs($other)->post(route('feedback.store'), [
+            'type' => 'usability',
+            'message' => 'Test feedback',
+            'page' => '/plans/' . $plan->id,
+            'plan_id' => $plan->id,
+        ])->assertRedirect();
+
+        $feedback = Feedback::firstOrFail();
+        $this->assertSame($other->id, $feedback->user_id);
+        $this->assertNull($feedback->plan_id);
     }
 
     public function test_living_roadmap_projects_task_split_and_concrete_restart_context(): void

@@ -47,8 +47,17 @@ function render(){if(!snapshot)return;document.getElementById('planTitle').textC
 async function start(){if(!snapshot?.current?.task_id)return;offlineSession={client_session_id:uuid(),task_id:snapshot.current.task_id,task_title:snapshot.current.title,started_at:new Date().toISOString(),paused_at:null,paused_seconds:0,ended_at:null};await put('offline_session',offlineSession);render();timerId=setInterval(renderTimer,1000)}
 async function pauseResume(){if(!offlineSession||offlineSession.ended_at)return;if(offlineSession.paused_at){offlineSession.paused_seconds+=(Date.now()-Date.parse(offlineSession.paused_at))/1000;offlineSession.paused_at=null}else offlineSession.paused_at=new Date().toISOString();await put('offline_session',offlineSession);controls()}
 async function finish(){if(!offlineSession)return;if(offlineSession.paused_at){offlineSession.paused_seconds+=(Date.now()-Date.parse(offlineSession.paused_at))/1000;offlineSession.paused_at=null}offlineSession.ended_at=new Date().toISOString();offlineSession.actual_seconds=elapsed(offlineSession);await put('offline_session',offlineSession);controls();await trySync()}
-async function trySync(){if(!offlineSession?.ended_at||!snapshot?.csrf_token)return false;try{const r=await fetch('/offline/work-sessions/sync',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':snapshot.csrf_token},body:JSON.stringify({client_session_id:offlineSession.client_session_id,task_id:offlineSession.task_id,started_at:offlineSession.started_at,ended_at:offlineSession.ended_at,actual_seconds:offlineSession.actual_seconds,intended_minutes:null})});if(!r.ok)return false;await del('offline_session');offlineSession=null;location.reload();return true}catch{return false}}
 let handoffInProgress=false,probeTimer=null;
+function handoffToNetwork(){
+  if(handoffInProgress)return;
+  handoffInProgress=true;
+  if(probeTimer)clearInterval(probeTimer);
+  document.getElementById('netLabel').textContent='最新画面を読み込み中…';
+  const target=new URL(window.location.href);
+  target.searchParams.set('_pk_network','1');
+  setTimeout(()=>window.location.replace(target.href),300);
+}
+async function trySync(){if(!offlineSession?.ended_at||!snapshot?.csrf_token)return false;try{const r=await fetch('/offline/work-sessions/sync',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':snapshot.csrf_token},body:JSON.stringify({client_session_id:offlineSession.client_session_id,task_id:offlineSession.task_id,started_at:offlineSession.started_at,ended_at:offlineSession.ended_at,actual_seconds:offlineSession.actual_seconds,intended_minutes:null})});if(!r.ok)return false;await del('offline_session');offlineSession=null;handoffToNetwork();return true}catch{return false}}
 async function probe(){
   if(handoffInProgress)return;
   try{
@@ -57,16 +66,10 @@ async function probe(){
     serverReady=true;
     document.getElementById('netDot').classList.add('ok');
     document.getElementById('netLabel').textContent='接続できました';
-    if(offlineSession?.ended_at){await trySync();return}
+    if(offlineSession?.ended_at){const synced=await trySync();if(!synced)handoffToNetwork();return}
     if(!offlineSession){
-      // Lock the handoff so overlapping 2.5s probes cannot schedule multiple
-      // reloads. Retry this exact URL with a one-shot SW network-only flag.
-      handoffInProgress=true;
-      if(probeTimer)clearInterval(probeTimer);
-      document.getElementById('netLabel').textContent='最新画面を読み込み中…';
-      const target=new URL(window.location.href);
-      target.searchParams.set('_pk_network','1');
-      setTimeout(()=>window.location.replace(target.href),300);
+      // Retry exactly once through the SW's network-only path.
+      handoffToNetwork();
     }
   }catch{
     serverReady=false;

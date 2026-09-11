@@ -4,15 +4,12 @@
 
 @section('content')
     <section class="mb-8">
-        <p class="mb-2 text-sm font-semibold text-slate-500">Edit Plan</p>
-
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">
-            計画編集
+            計画を編集
         </h1>
 
         <p class="mt-3 max-w-3xl leading-7 text-slate-600">
-            計画の基本情報や公開設定を変更できます。
-            期限や公開状態を変更すると、進捗計算や公開計画一覧にも反映されます。
+            変えたいところだけ直せます。今の内容はそのまま入っています。
         </p>
     </section>
 
@@ -81,6 +78,13 @@
                     </select>
                 </div>
 
+                <section id="plan-design" class="scroll-mt-28">
+                    <div class="mb-3">
+                        <h2 class="text-lg font-bold text-slate-900">この計画の見た目</h2>
+                    </div>
+                    @include('plans.partials.visual-picker', ['visualPlan' => $plan])
+                </section>
+
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label for="start_date" class="mb-2 block text-sm font-medium text-slate-700">
@@ -91,7 +95,7 @@
                             id="start_date"
                             type="date"
                             name="start_date"
-                            value="{{ old('start_date', $plan->start_date) }}"
+                            value="{{ old('start_date', $plan->start_date?->format('Y-m-d')) }}"
                             required
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
                         >
@@ -106,7 +110,7 @@
                             id="deadline"
                             type="date"
                             name="deadline"
-                            value="{{ old('deadline', $plan->deadline) }}"
+                            value="{{ old('deadline', $plan->deadline?->format('Y-m-d')) }}"
                             required
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
                         >
@@ -114,6 +118,7 @@
                 </div>
 
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <input type="hidden" name="is_public" value="0">
                     <label class="flex items-start gap-3">
                         <input
                             type="checkbox"
@@ -129,7 +134,7 @@
                             </span>
 
                             <span class="mt-1 block text-sm leading-6 text-slate-600">
-                                公開すると、他の人が公開計画一覧や共有URLからこの計画を閲覧できます。
+                                公開すると、共有URLを知っている人がこの計画を見られます。
                                 公開ページでは編集や作業ログの追加はできません。
                             </span>
                         </span>
@@ -148,7 +153,7 @@
                         href="{{ route('plans.show', $plan) }}"
                         class="btn-secondary"
                     >
-                        計画詳細へ戻る
+                        戻る
                     </a>
                 </div>
             </form>

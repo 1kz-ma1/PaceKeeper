@@ -9,6 +9,7 @@ use App\Services\BehaviorEventLogger;
 use App\Services\BehaviorIdentityService;
 use App\Services\DashboardPresentationService;
 use App\Services\ContinuityService;
+use App\Services\CalendarPresentationService;
 use App\Services\PlanOwnershipService;
 use App\Services\PlanProgressService;
 use App\Services\UserBehaviorService;
@@ -26,6 +27,7 @@ class HomeController extends Controller
         UserStateService $stateService,
         DashboardPresentationService $dashboardService,
         ContinuityService $continuityService,
+        CalendarPresentationService $calendarService,
     ) {
         $actorToken = $identity->resolve($request);
         $plans = $ownership->ownedPlans($request, [
@@ -51,6 +53,7 @@ class HomeController extends Controller
 
         $continuity = $continuityService->forPlans($plans, $actorToken);
         $dashboard['continuity'] = $continuity;
+        $dashboard['calendar_week'] = $calendarService->weekSummary($plans);
 
         if ($dashboard['recommendation']) {
             $recommendation = $dashboard['recommendation'];

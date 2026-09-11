@@ -6,11 +6,7 @@
     <div class="mx-auto max-w-3xl space-y-5 md:space-y-6">
         <header class="flex items-start justify-between gap-3 md:gap-4">
             <div class="min-w-0">
-                <p class="text-sm font-semibold text-sky-400">Today</p>
-                <h1 class="mt-1 text-3xl font-bold text-slate-100 md:mt-2">今日のおすすめ</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400 md:leading-7">
-                    まず1件だけ。合わなければ、横にスワイプして別候補を選べます。
-                </p>
+                <h1 class="text-3xl font-bold text-slate-100">今日のおすすめ</h1>
             </div>
             @if (($draft['step'] ?? 'recommendation') !== 'recommendation')
                 <form method="POST" action="{{ route('navigation.reset') }}" class="shrink-0">
@@ -24,7 +20,7 @@
             <div class="rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-slate-200">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <p><span class="font-semibold text-sky-300">{{ $scopePlan->title }}</span> から選んでいます。</p>
-                    <a href="{{ route('navigation.index', ['all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">全Planに広げる</a>
+                    <a href="{{ route('navigation.index', ['all' => 1]) }}" class="whitespace-nowrap text-sm font-semibold text-sky-300 hover:text-sky-200">すべての計画から選ぶ</a>
                 </div>
             </div>
         @endif
@@ -65,7 +61,7 @@
                             </div>
                             @if (($draft['intent'] ?? null) === 'preferred')
                                 <label>
-                                    <span class="form-label">進めたいPlan</span>
+                                    <span class="form-label">進めたい計画</span>
                                     <select name="preferred_plan_id" class="form-control" required>
                                         <option value="">選択</option>
                                         @foreach ($plans as $plan)
@@ -83,12 +79,12 @@
                     <div class="assistant-avatar">PK</div>
                     <div class="assistant-bubble assistant-bubble-support assistant-wide-bubble">
                         @if ($recommendation)
-                            <section class="rounded-3xl border border-sky-400/20 bg-slate-950/30 p-4 md:p-5">
+                            <section class="rounded-3xl border border-sky-400/20 bg-slate-950/30 p-4 md:p-5 plan-identity-shell" data-plan-accent="{{ $recommendation->plan->accentKey() }}">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
                                         <p class="text-xs font-bold uppercase tracking-[0.18em] text-sky-300">Top pick</p>
                                         <h2 class="mt-2 text-2xl font-bold text-slate-100">{{ $recommendation->task->title }}</h2>
-                                        <p class="mt-1 truncate text-sm text-slate-400">{{ $recommendation->plan->title }}</p>
+                                        <p class="mt-1 plan-identity-chip truncate text-sm"><span aria-hidden="true">{{ $recommendation->plan->displayIcon() }}</span>{{ $recommendation->plan->title }}</p>
                                     </div>
                                     <div class="shrink-0 rounded-2xl border border-sky-400/20 bg-slate-950/40 px-3 py-2 text-right">
                                         <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">目安</p>
@@ -120,7 +116,7 @@
                                     <input type="hidden" name="task_id" value="{{ $recommendation->task->id }}">
                                     <input type="hidden" name="intended_minutes" value="{{ $recommendation->recommendedMinutes }}">
                                     <input type="hidden" name="source" value="navigation">
-                                    <button class="btn-primary w-full justify-center py-3 text-base">このまま開始</button>
+                                    <button class="btn-primary w-full justify-center py-3 text-base" data-onboarding-target="today-start">このまま開始</button>
                                 </form>
                             </section>
 
@@ -141,7 +137,8 @@
 
                                         <div class="candidate-track" data-candidate-track>
                                             @foreach ($recommendations as $candidate)
-                                                <article class="candidate-card {{ $loop->first ? 'is-primary' : '' }}"
+                                                <article class="candidate-card {{ $loop->first ? 'is-primary' : '' }} plan-identity-shell"
+                                                         data-plan-accent="{{ $candidate->plan->accentKey() }}"
                                                          data-candidate-card
                                                          data-task-id="{{ $candidate->task->id }}"
                                                          data-plan-id="{{ $candidate->plan->id }}">
@@ -151,7 +148,7 @@
                                                                 {{ $loop->first ? 'おすすめ' : '候補 ' . ($loop->iteration) }}
                                                             </p>
                                                             <h3 class="mt-2 text-lg font-bold text-slate-100">{{ $candidate->task->title }}</h3>
-                                                            <p class="mt-1 truncate text-xs text-slate-400">{{ $candidate->plan->title }}</p>
+                                                            <p class="mt-1 plan-identity-chip truncate text-xs"><span aria-hidden="true">{{ $candidate->plan->displayIcon() }}</span>{{ $candidate->plan->title }}</p>
                                                         </div>
                                                         <span class="badge badge-slate shrink-0">{{ $candidate->recommendedMinutes }}分</span>
                                                     </div>
@@ -189,8 +186,8 @@
                                 どの候補を見て、どれを開始したかも次回のおすすめ改善に使われます。
                             </p>
                         @else
-                            <h2 class="text-xl font-bold text-slate-100">今すぐ始められるTaskが見つかりませんでした</h2>
-                            <p class="mt-2 text-slate-400">条件を変えるか、Taskを追加してからもう一度試してください。</p>
+                            <h2 class="text-xl font-bold text-slate-100">今すぐ始められるタスクが見つかりませんでした</h2>
+                            <p class="mt-2 text-slate-400">条件を変えるか、タスクを追加してからもう一度試してください。</p>
                             <div class="mt-5 grid gap-3 sm:flex sm:flex-wrap">
                                 <form method="POST" action="{{ route('navigation.reset') }}">
                                     @csrf

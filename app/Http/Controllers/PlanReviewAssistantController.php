@@ -1987,7 +1987,9 @@ PROMPT;
     ): array {
         $analysis = $this->analyzeProposal($plan, $action, $operations);
 
-        $roadmapPreview = app(RoadmapService::class)->project($plan, $operations);
+        $roadmapService = app(RoadmapService::class);
+        $roadmapBefore = $roadmapService->build($plan);
+        $roadmapPreview = $roadmapService->project($plan, $operations);
 
         return [
             'token' => (string) Str::uuid(),
@@ -2003,6 +2005,7 @@ PROMPT;
                 'category' => $plan->category,
             ],
             'analysis' => $analysis,
+            'roadmap_before' => $roadmapBefore,
             'roadmap_preview' => $roadmapPreview,
             'can_apply' => $analysis['blocking_issues'] === [],
             'created_at' => now()->toIso8601String(),
