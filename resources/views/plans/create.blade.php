@@ -40,7 +40,7 @@
                         type="text"
                         name="title"
                         value="{{ old('title') }}"
-                        placeholder="例：応用情報処理技術者試験 合格"
+                        placeholder="例：応用情報技術者試験 合格"
                         required
                         class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
                     >

@@ -54,7 +54,15 @@
             <div class="ready-area">
                 <p class="status" data-status>アプリを準備しています…</p>
                 <button type="button" class="open-button" data-open disabled>PaceKeeperを開く</button>
-                <button type="button" class="skip-wait" data-open-anyway>待たずに開く</button>
+
+                <div class="slow-notice hidden" data-slow-notice>
+                    <p class="slow-title">いつもより準備に時間がかかっています</p>
+                    <p class="slow-copy">接続先が休止中の場合などは、起動まで少し長くかかることがあります。この画面の内容を見ながら、そのままお待ちいただけます。</p>
+                    <div class="slow-actions">
+                        <button type="button" class="retry-button" data-retry>もう一度確認</button>
+                        <button type="button" class="skip-wait" data-open-anyway>そのまま開く</button>
+                    </div>
+                </div>
             </div>
         </section>
 

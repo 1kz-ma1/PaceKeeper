@@ -2157,14 +2157,29 @@ html[data-theme-resolved="light"] .roadmap-map-stage { border-color: rgb(203 213
     .roadmap-map-stop > summary:hover .roadmap-map-marker { transform: translateY(-2px); }
     .roadmap-map-stop.is-current > summary:hover .roadmap-map-marker { transform: translateY(-2px) scale(1.02); }
 }
-/* Plan create/edit keep their existing light form surface while adding identity controls. */
+/* Plan identity editor follows the active theme instead of flashing a light-only surface. */
 .plan-visual-picker {
-    background: rgb(248 250 252 / 0.86);
-    border-color: rgb(226 232 240);
+    background: rgb(15 23 42 / 0.46);
+    border-color: rgb(71 85 105 / 0.72);
 }
-.plan-visual-picker label > span { color: rgb(71 85 105); }
+.plan-visual-picker label > span { color: rgb(148 163 184); }
 html[data-theme-resolved="dark"] .plan-visual-picker input,
-html[data-theme-resolved="dark"] .plan-visual-picker select { background: white !important; color: rgb(15 23 42) !important; }
+html[data-theme-resolved="dark"] .plan-visual-picker select {
+    background: rgb(15 23 42 / 0.82) !important;
+    color: rgb(241 245 249) !important;
+    border-color: rgb(71 85 105) !important;
+}
+html[data-theme-resolved="dark"] .plan-visual-picker [class*="text-slate-900"] { color: rgb(241 245 249) !important; }
+html[data-theme-resolved="dark"] .plan-visual-picker [class*="text-slate-600"],
+html[data-theme-resolved="dark"] .plan-visual-picker [class*="text-slate-500"] { color: rgb(148 163 184) !important; }
+html[data-theme-resolved="dark"] .plan-visual-preview {
+    background: linear-gradient(90deg, rgb(var(--plan-accent) / 0.16), rgb(15 23 42 / 0.72)) !important;
+}
+html[data-theme-resolved="light"] .plan-visual-picker {
+    background: rgb(248 250 252 / 0.98) !important;
+    border-color: rgb(203 213 225) !important;
+}
+html[data-theme-resolved="light"] .plan-visual-picker label > span { color: rgb(51 65 85) !important; }
 .roadmap-map-stop.is-lineage-source .roadmap-map-marker::before {
     content: '◇';
     position: absolute;
@@ -2663,6 +2678,61 @@ html[data-theme-resolved="light"] .feedback-distribution-row strong { color: rgb
     50% { box-shadow: 0 0 0 7px rgb(var(--pk-accent, 14 165 233) / 0.08), 0 0 38px rgb(var(--pk-accent, 14 165 233) / 0.5); }
 }
 
+.onboarding-intro-dialog {
+    width: min(38rem, calc(100vw - 1.5rem));
+    max-width: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+.onboarding-intro-dialog::backdrop {
+    background: rgb(2 6 23 / 0.76);
+    backdrop-filter: blur(5px);
+}
+.onboarding-intro-card {
+    border: 1px solid rgb(71 85 105 / 0.78);
+    border-radius: 1.5rem;
+    background:
+        radial-gradient(circle at 90% 0%, rgb(var(--pk-accent, 14 165 233) / 0.14), transparent 16rem),
+        rgb(15 23 42 / 0.99);
+    padding: clamp(1.1rem, 4vw, 1.6rem);
+    box-shadow: 0 30px 90px rgb(2 6 23 / 0.58);
+}
+.onboarding-intro-points {
+    display: grid;
+    gap: 0.65rem;
+}
+.onboarding-intro-points article {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    border: 1px solid rgb(71 85 105 / 0.6);
+    border-radius: 1rem;
+    background: rgb(2 6 23 / 0.28);
+    padding: 0.85rem;
+}
+.onboarding-intro-points article > span {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    border-radius: 0.75rem;
+    background: rgb(var(--pk-accent, 14 165 233) / 0.12);
+}
+.onboarding-intro-points strong {
+    display: block;
+    color: rgb(241 245 249);
+    font-size: 0.86rem;
+}
+.onboarding-intro-points small {
+    display: block;
+    margin-top: 0.18rem;
+    color: rgb(148 163 184);
+    font-size: 0.75rem;
+    line-height: 1.55;
+}
+
 .install-guide-dialog {
     width: min(31rem, calc(100vw - 1.5rem));
     max-width: none;
@@ -2684,13 +2754,19 @@ html[data-theme-resolved="light"] .feedback-distribution-row strong { color: rgb
 
 html[data-theme-resolved="light"] .onboarding-blocker { background: rgb(15 23 42 / 0.58); }
 html[data-theme-resolved="light"] .onboarding-bubble,
+html[data-theme-resolved="light"] .onboarding-intro-card,
 html[data-theme-resolved="light"] .install-guide-card {
     border-color: rgb(203 213 225);
     background: rgb(255 255 255 / 0.99);
     box-shadow: 0 24px 70px rgb(15 23 42 / 0.18);
 }
 html[data-theme-resolved="light"] .onboarding-title,
+html[data-theme-resolved="light"] .onboarding-intro-card h2,
 html[data-theme-resolved="light"] .install-guide-card h2 { color: rgb(15 23 42) !important; }
+html[data-theme-resolved="light"] .onboarding-intro-card > p { color: rgb(51 65 85) !important; }
+html[data-theme-resolved="light"] .onboarding-intro-points article { background: rgb(248 250 252); border-color: rgb(203 213 225); }
+html[data-theme-resolved="light"] .onboarding-intro-points strong { color: rgb(15 23 42); }
+html[data-theme-resolved="light"] .onboarding-intro-points small { color: rgb(71 85 105); }
 html[data-theme-resolved="light"] .onboarding-copy { color: rgb(51 65 85); }
 html[data-theme-resolved="light"] .onboarding-skip { color: rgb(71 85 105); }
 html[data-theme-resolved="light"] .install-guide-card [class*="text-slate-100"],
