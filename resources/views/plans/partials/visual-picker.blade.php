@@ -11,7 +11,7 @@
             <p class="text-sm font-bold text-slate-900">見た目</p>
             <p class="mt-1 text-xs leading-5 text-slate-600">ホーム・今日・ロードマップで同じ見た目になります。</p>
         </div>
-        <span class="badge badge-slate">Personalize</span>
+        <span class="badge badge-slate">カスタマイズ</span>
     </div>
 
     <div class="plan-visual-preview plan-identity-shell mt-4" data-plan-visual-preview data-plan-accent="{{ $currentAccent }}">
@@ -32,7 +32,7 @@
         <label>
             <span>アクセント</span>
             <select name="accent_key" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" data-plan-visual-accent-input>
-                @foreach (['sky' => 'Sky', 'emerald' => 'Emerald', 'violet' => 'Violet', 'amber' => 'Amber', 'rose' => 'Rose', 'cyan' => 'Cyan'] as $key => $label)
+                @foreach (\App\Models\Plan::ACCENT_LABELS as $key => $label)
                     <option value="{{ $key }}" @selected($currentAccent === $key)>{{ $label }}</option>
                 @endforeach
             </select>

@@ -258,7 +258,7 @@
                         @endif
 
                         <details class="mt-5 rounded-2xl border border-slate-700 bg-slate-950/55 p-4">
-                            <summary class="cursor-pointer font-bold text-slate-200">変更前のRoadmapを見る</summary>
+                            <summary class="cursor-pointer font-bold text-slate-200">変更前のロードマップを見る</summary>
                             <div class="mt-4 opacity-80">
                                 @include('plans.partials.roadmap', [
                                     'roadmap' => $proposal['roadmap_before'] ?? ['nodes' => []],
@@ -296,7 +296,7 @@
                             @else
                                 <details class="rounded-2xl border border-slate-300 bg-white/70 p-4">
                                     <summary class="cursor-pointer font-bold text-slate-900">変更の詳細・反映項目を選ぶ</summary>
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">Roadmapに直接出ない作業ログや作業可能時間もここで確認できます。</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">ロードマップに直接出ない作業ログや作業可能時間もここで確認できます。</p>
                                     <div class="mt-4 space-y-3">
                                         @foreach ($proposal['operations'] as $index => $operation)
                                             @php $isDanger = $operation['type'] === 'cancel_task'; @endphp
