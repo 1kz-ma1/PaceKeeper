@@ -191,7 +191,7 @@
                 <fieldset class="mt-6">
                     <legend class="text-sm font-bold text-slate-200">アクセント</legend>
                     <div class="ui-accent-options mt-3" data-ui-accent-options>
-                        @foreach (['sky' => 'Sky', 'emerald' => 'Emerald', 'violet' => 'Violet', 'amber' => 'Amber', 'rose' => 'Rose', 'cyan' => 'Cyan'] as $accentKey => $accentLabel)
+                        @foreach (\App\Models\Plan::ACCENT_LABELS as $accentKey => $accentLabel)
                             <button type="button" class="ui-accent-swatch" data-ui-accent-value="{{ $accentKey }}" data-accent="{{ $accentKey }}" aria-label="{{ $accentLabel }}"></button>
                         @endforeach
                     </div>

@@ -1,3 +1,40 @@
+<dialog class="onboarding-intro-dialog" data-onboarding-intro aria-labelledby="onboarding-intro-title">
+    <section class="onboarding-intro-card">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="onboarding-kicker">はじめに</p>
+                <h2 id="onboarding-intro-title" class="mt-1 text-2xl font-black text-slate-50">PaceKeeperは、次の一歩を決めやすくするアプリです</h2>
+            </div>
+            <button type="button" class="feedback-close" data-onboarding-intro-skip aria-label="案内をスキップ">×</button>
+        </div>
+
+        <p class="mt-4 text-sm leading-7 text-slate-300">
+            資格勉強、制作、個人開発など、進めたいことはあるのに「今日は何をしよう」で止まりやすい人向けです。
+            計画・作業実績・普段使っているAIをつないで、次にやることを見つけやすくします。
+        </p>
+
+        <div class="onboarding-intro-points mt-5">
+            <article>
+                <span aria-hidden="true">🤝</span>
+                <div><strong>いつものAIで相談</strong><small>ChatGPTなど、普段のAIをそのまま使えます。</small></div>
+            </article>
+            <article>
+                <span aria-hidden="true">🗺️</span>
+                <div><strong>先はロードマップで確認</strong><small>やる順番と現在地を見失いにくくします。</small></div>
+            </article>
+            <article>
+                <span aria-hidden="true">⚡</span>
+                <div><strong>迷ったら「今日」から</strong><small>候補を絞って、そのまま作業を始められます。</small></div>
+            </article>
+        </div>
+
+        <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+            <button type="button" class="btn-primary flex-1 justify-center" data-onboarding-intro-start>使い方を見てみる</button>
+            <button type="button" class="btn-secondary flex-1 justify-center" data-onboarding-intro-skip>今はスキップ</button>
+        </div>
+    </section>
+</dialog>
+
 <div
     class="onboarding-layer hidden"
     data-onboarding-root
@@ -46,7 +83,12 @@
 
         <div class="mt-5 hidden rounded-2xl border border-sky-400/25 bg-sky-500/10 p-4 text-sm leading-6 text-slate-200" data-install-ios-help>
             <p class="font-bold text-slate-100">iPhone / iPadの場合</p>
-            <p class="mt-1">Safariの共有ボタンから「ホーム画面に追加」を選んでください。</p>
+            <p class="mt-1">Safariで共有ボタンを押し、「ホーム画面に追加」→「追加」の順に選んでください。</p>
+        </div>
+
+        <div class="mt-5 hidden rounded-2xl border border-slate-700 bg-slate-950/35 p-4 text-sm leading-6 text-slate-300" data-install-browser-help>
+            <p class="font-bold text-slate-100" data-install-browser-title>ブラウザから追加できます</p>
+            <p class="mt-1" data-install-browser-copy>ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。</p>
         </div>
 
         <div class="mt-5 flex flex-col gap-2 sm:flex-row">

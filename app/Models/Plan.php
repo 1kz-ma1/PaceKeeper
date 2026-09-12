@@ -8,6 +8,15 @@ class Plan extends Model
 {
     public const ACCENT_KEYS = ['sky', 'emerald', 'violet', 'amber', 'rose', 'cyan'];
 
+    public const ACCENT_LABELS = [
+        'sky' => '青',
+        'emerald' => '緑',
+        'violet' => '紫',
+        'amber' => 'オレンジ',
+        'rose' => 'ピンク',
+        'cyan' => 'ターコイズ',
+    ];
+
     public const ROADMAP_WORLDS = ['default', 'study', 'sweet', 'halloween', 'space', 'forest'];
 
     protected $hidden = ['owner_token'];

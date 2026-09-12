@@ -802,6 +802,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const actions = root?.querySelector('[data-onboarding-actions]');
     const nextButton = root?.querySelector('[data-onboarding-next]');
     const skipButton = root?.querySelector('[data-onboarding-skip]');
+    const introDialog = document.querySelector('[data-onboarding-intro]');
+    const introStart = introDialog?.querySelector('[data-onboarding-intro-start]');
+    const introSkips = introDialog ? [...introDialog.querySelectorAll('[data-onboarding-intro-skip]')] : [];
 
     const version = Number(body?.dataset.onboardingVersion || 1);
     const stateKey = `pacekeeper.onboarding.v${version}`;
@@ -920,7 +923,19 @@ document.addEventListener('DOMContentLoaded', () => {
         cleanupTargetListeners = () => {};
         activeTarget = null;
         root?.classList.add('hidden');
+        pacekeeperCloseDialog(introDialog);
         body?.classList.remove('onboarding-active');
+    };
+
+    const showIntro = () => {
+        if (!introDialog) {
+            setStage('home-create');
+            showStep('home-create');
+            return;
+        }
+        root?.classList.add('hidden');
+        body?.classList.remove('onboarding-active');
+        pacekeeperOpenDialog(introDialog);
     };
 
     const completeOnboarding = (isReplay = false) => {
@@ -1045,6 +1060,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    introStart?.addEventListener('click', () => {
+        pacekeeperCloseDialog(introDialog);
+        setStage('home-create');
+        window.setTimeout(() => showStep('home-create'), 80);
+    });
+    introSkips.forEach((button) => button.addEventListener('click', skipOnboarding));
     skipButton?.addEventListener('click', skipOnboarding);
     window.addEventListener('resize', placeOverlay);
     window.addEventListener('scroll', placeOverlay, { passive: true });
@@ -1072,9 +1093,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const newUserDashboard = document.querySelector('[data-onboarding-new-user="1"]');
     if (replayMode && !currentStage) currentStage = 'replay-today';
     if (!currentStage && body?.dataset.onboardingAuto === '1' && !localState && newUserDashboard) {
-        setStage('home-create');
+        setStage('intro');
     }
-    if (currentStage) window.setTimeout(() => showStep(currentStage), 260);
+    if (currentStage) {
+        window.setTimeout(() => {
+            if (currentStage === 'intro') showIntro();
+            else showStep(currentStage);
+        }, 260);
+    }
 
     // PWA / home-screen install guidance. Automatic display is queued only
     // after the guided flow is complete, and never interrupts focus/timer mode.
@@ -1083,12 +1109,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const installLater = installDialog?.querySelector('[data-install-guide-later]');
     const installCopy = installDialog?.querySelector('[data-install-guide-copy]');
     const iosHelp = installDialog?.querySelector('[data-install-ios-help]');
+    const browserHelp = installDialog?.querySelector('[data-install-browser-help]');
+    const browserHelpTitle = installDialog?.querySelector('[data-install-browser-title]');
+    const browserHelpCopy = installDialog?.querySelector('[data-install-browser-copy]');
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent)
         || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(navigator.userAgent);
 
     const configureInstallGuide = () => {
         if (!installDialog || !installAction) return;
-        iosHelp?.classList.toggle('hidden', !isIos || Boolean(pacekeeperDeferredInstallPrompt));
+        const hasNativePrompt = Boolean(pacekeeperDeferredInstallPrompt);
+        iosHelp?.classList.toggle('hidden', !isIos || hasNativePrompt);
+        browserHelp?.classList.toggle('hidden', isIos || hasNativePrompt);
         if (pacekeeperDeferredInstallPrompt) {
             installAction.textContent = 'ホーム画面に追加';
             installAction.disabled = false;
@@ -1101,9 +1133,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (installCopy) installCopy.textContent = 'Safariの共有メニューから追加できます。';
             return;
         }
-        installAction.textContent = '追加方法を確認';
+        installAction.textContent = '手順を確認しました';
         installAction.disabled = false;
-        if (installCopy) installCopy.textContent = 'ブラウザのメニューに「アプリをインストール」または「ホーム画面に追加」があれば選んでください。';
+        if (installCopy) installCopy.textContent = 'ブラウザのメニューからホーム画面へ追加できます。';
+        if (browserHelpTitle) browserHelpTitle.textContent = isAndroid ? 'Androidの場合' : 'ブラウザから追加';
+        if (browserHelpCopy) {
+            browserHelpCopy.textContent = isAndroid
+                ? 'ChromeやEdgeの右上メニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。'
+                : 'ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。';
+        }
     };
 
     const showInstallGuide = (force = false) => {

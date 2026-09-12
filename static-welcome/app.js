@@ -4,16 +4,23 @@
     const status = document.querySelector('[data-status]');
     const openButton = document.querySelector('[data-open]');
     const openAnyway = document.querySelector('[data-open-anyway]');
+    const retryButton = document.querySelector('[data-retry]');
+    const slowNotice = document.querySelector('[data-slow-notice]');
     const hints = [...document.querySelectorAll('[data-hint]')];
     const dots = [...document.querySelectorAll('[data-hint-dot]')];
     const seenKey = 'pacekeeper.welcome.seen.v1';
     const returning = localStorage.getItem(seenKey) === '1';
+    const startedAt = Date.now();
+    const slowAfterMs = 22000;
     let ready = false;
     let hintIndex = 0;
     let wakeTimer = null;
+    let wakeInFlight = false;
+    let slowStateShown = false;
 
     if (!appUrl) {
         status.textContent = '接続先が設定されていません。';
+        slowNotice?.classList.remove('hidden');
         return;
     }
 
@@ -32,6 +39,15 @@
         window.location.assign(appUrl);
     };
 
+    const showSlowState = () => {
+        if (slowStateShown || ready) return;
+        slowStateShown = true;
+        status.textContent = navigator.onLine
+            ? 'もう少しだけ準備しています…'
+            : 'インターネット接続を確認してください';
+        slowNotice?.classList.remove('hidden');
+    };
+
     const markReady = () => {
         if (ready) return;
         ready = true;
@@ -40,11 +56,34 @@
         status.classList.add('is-ready');
         openButton.disabled = false;
         openButton.textContent = 'PaceKeeperを開く';
+        slowNotice?.classList.add('hidden');
         if (returning) window.setTimeout(openApp, 450);
     };
 
-    const wake = async () => {
+    const scheduleWake = () => {
         if (ready) return;
+        const elapsed = Date.now() - startedAt;
+        if (elapsed >= slowAfterMs) showSlowState();
+        wakeTimer = window.setTimeout(() => wake(), elapsed >= slowAfterMs ? 6500 : 2200);
+    };
+
+    const wake = async (manual = false) => {
+        if (ready || wakeInFlight) return;
+        wakeInFlight = true;
+        window.clearTimeout(wakeTimer);
+
+        if (manual) {
+            status.textContent = 'もう一度確認しています…';
+            status.classList.remove('is-ready');
+        }
+
+        if (!navigator.onLine) {
+            showSlowState();
+            wakeInFlight = false;
+            scheduleWake();
+            return;
+        }
+
         const controller = new AbortController();
         const timeout = window.setTimeout(() => controller.abort(), 7000);
         try {
@@ -60,15 +99,21 @@
                 return;
             }
         } catch (_) {
-            // Render's own cold-start/loading response does not carry our CORS
-            // header. Keep showing useful hints and retry until Laravel answers.
+            // Renderなどの起動中レスポンスは、PaceKeeperのReadyヘッダーを返しません。
+            // Welcome画面を維持したまま次の確認を待ちます。
         } finally {
             window.clearTimeout(timeout);
+            wakeInFlight = false;
         }
-        wakeTimer = window.setTimeout(wake, 2200);
+
+        scheduleWake();
     };
 
     openButton.addEventListener('click', openApp);
-    openAnyway.addEventListener('click', openApp);
+    openAnyway?.addEventListener('click', openApp);
+    retryButton?.addEventListener('click', () => wake(true));
+    window.addEventListener('online', () => wake(true));
+    window.addEventListener('offline', showSlowState);
+
     wake();
 })();

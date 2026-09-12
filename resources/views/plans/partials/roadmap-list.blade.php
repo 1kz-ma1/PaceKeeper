@@ -176,7 +176,7 @@
             <p class="font-bold text-slate-100">ロードマップに表示するタスクがまだありません。</p>
             <p class="mt-2 text-sm leading-6 text-slate-400">最初から完璧に決めなくて大丈夫です。まず始めて、あとから整えていけます。</p>
             @if ($roadmapCanEdit && $roadmapPlan)
-                <a href="{{ route('plans.ai_task_assistant.show', $roadmapPlan) }}" class="btn-primary mt-4">最初のRoadmapを作る</a>
+                <a href="{{ route('plans.ai_task_assistant.show', $roadmapPlan) }}" class="btn-primary mt-4">最初のロードマップを作る</a>
             @endif
         </div>
     @endforelse

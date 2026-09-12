@@ -70,11 +70,43 @@ h1 { margin: 0; font-size: clamp(25px, 5vw, 36px); line-height: 1.1; letter-spac
 .open-button:not(:disabled):active, .skip-wait:active { transform: scale(.985); }
 .skip-wait { min-height: 38px; background: transparent; color: #64748b; font-size: 12px; font-weight: 800; }
 .skip-wait:hover { color: #cbd5e1; }
+
+.hidden { display: none !important; }
+.slow-notice {
+    margin-top: 6px;
+    border: 1px solid rgba(125,211,252,.18);
+    border-radius: 16px;
+    background: rgba(15,23,42,.58);
+    padding: 14px;
+    text-align: left;
+}
+.slow-title { margin: 0; color: #e2e8f0; font-size: 13px; font-weight: 900; }
+.slow-copy { margin: 7px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.7; }
+.slow-actions { display: flex; gap: 8px; margin-top: 12px; }
+.retry-button, .slow-actions .skip-wait {
+    flex: 1;
+    min-height: 42px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 900;
+}
+.retry-button {
+    border: 1px solid rgba(56,189,248,.34);
+    background: rgba(14,165,233,.12);
+    color: #bae6fd;
+    cursor: pointer;
+}
+.slow-actions .skip-wait {
+    border: 1px solid rgba(100,116,139,.34);
+    background: rgba(30,41,59,.65);
+    color: #cbd5e1;
+}
 .footnote { margin: 0; text-align: center; color: #64748b; font-size: 12px; line-height: 1.7; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { 50% { transform: scale(1.18); opacity: .6; } }
 @media (max-width: 520px) {
     .welcome-shell { align-content: start; padding-top: max(34px, env(safe-area-inset-top)); }
+    .slow-actions { flex-direction: column; }
     .brand { justify-content: flex-start; }
     .brand-icon { width: 58px; height: 58px; border-radius: 18px; }
     .welcome-card { min-height: 448px; border-radius: 26px; }

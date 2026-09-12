@@ -75,17 +75,17 @@ PROMPT;
         $decoded = json_decode($json, true);
 
         if (! is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
-            throw ValidationException::withMessages(['tasks_json' => 'JSONの構文が正しくありません。']);
+            throw ValidationException::withMessages(['tasks_json' => 'AIの回答から計画データを読み取れませんでした。最後の回答をそのまま貼り付けるか、AIに「最後はJSONだけで出力して」と伝えてください。']);
         }
 
         if ((string) ($decoded['schema_version'] ?? '') !== '2.0' || ($decoded['flow'] ?? null) !== 'plan_generation') {
-            throw ValidationException::withMessages(['tasks_json' => 'schema_version 2.0・flow plan_generationのJSONを使用してください。']);
+            throw ValidationException::withMessages(['tasks_json' => 'PaceKeeper用の計画データではないようです。この画面の相談用文章から作った回答を貼り付けてください。']);
         }
 
         $target = $decoded['target_plan'] ?? [];
 
         if ((int) ($target['id'] ?? 0) !== $plan->id || trim((string) ($target['title'] ?? '')) !== $plan->title) {
-            throw ValidationException::withMessages(['tasks_json' => 'JSONの対象計画が現在の計画と一致しません。']);
+            throw ValidationException::withMessages(['tasks_json' => '別の計画向けの回答のようです。この画面から作った相談内容を使って、もう一度AIへ相談してください。']);
         }
 
         $operations = $decoded['operations'] ?? null;
@@ -190,11 +190,29 @@ PROMPT;
 
     private function extractJson(string $text): string
     {
-        if (preg_match('/```(?:json)?\s*(.*?)\s*```/s', trim($text), $matches)) {
+        $trimmed = trim($text);
+
+        if (preg_match('/```(?:json)?\s*(.*?)\s*```/is', $trimmed, $matches)) {
             return trim($matches[1]);
         }
 
-        return trim($text);
+        if (str_starts_with($trimmed, '{') && str_ends_with($trimmed, '}')) {
+            return $trimmed;
+        }
+
+        $start = strpos($trimmed, '{');
+        $end = strrpos($trimmed, '}');
+
+        if ($start !== false && $end !== false && $end > $start) {
+            $candidate = trim(substr($trimmed, $start, $end - $start + 1));
+            json_decode($candidate, true);
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $candidate;
+            }
+        }
+
+        return $trimmed;
     }
 
     private function authorizePlanOwner(Plan $plan): void
